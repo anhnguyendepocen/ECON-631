@@ -12,7 +12,8 @@ function [log_like] = llprobitsys(x,y,x1,x2,z);
     % Probability
     prob_y_1 = zeros(rows(y),1);
     mu = zeros(rows(y),1);
-    
+    prob_x_2 = zeros(rows(y),1);
+
     for i = 1: rows(y) ;
         
     mu(i) =  (x(1,8)/x(1,7)) ...
@@ -26,9 +27,14 @@ function [log_like] = llprobitsys(x,y,x1,x2,z);
         if  prob_y_1(i)  < ( 1 - .9999999)
             prob_y_1(i) = .01;
         end;
+        
+        prob_x_2(i) =  normpdf( mu(i) *  (x(1,7)/x(1,8)), 0, x(1,7));
+         if  prob_x_2(i)  < ( 1 - .9999999)
+            prob_x_2(i) = .01;
+        end;
     end;
-    
+        
     % Log likelihood
-    ln_like_vec = y .* log(prob_y_1) + (1 - y) .* log(1 - prob_y_1);
+    ln_like_vec = y .* log(prob_y_1) + (1 - y) .* log(1 - prob_y_1) + log(prob_x_2);
     log_like = -sum(ln_like_vec);
 end

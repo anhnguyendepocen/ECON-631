@@ -62,8 +62,8 @@ thetatwohat = estimateprobit(1,3);
 thetathreehat = 0;
 thetafourhat = 0;
 thetafivehat = 0;
-rhohat = .1;
-sigmasquaredhat = .1;
+rhohat = 1;
+sigmasquaredhat = .5;
 
 thetanullhat =  [thetazerohat thetaonehat thetatwohat thetathreehat thetafourhat thetafivehat rhohat sigmasquaredhat];
 
@@ -74,4 +74,22 @@ cov_Hessianprobitsys = inv(Hessianprobitsys);
 std_probitsys = sqrt(diag(cov_Hessianprobitsys));
 
 %%
+%Verify not sensitive to initial guesses
 
+
+thetazerohat = .1;
+thetaonehat = .1;
+thetatwohat = .1;
+thetathreehat = .1;
+thetafourhat = .1;
+thetafivehat = .1;
+rhohat = .1;
+sigmasquaredhat = .2;
+
+thetanullhat =  [thetazerohat thetaonehat thetatwohat thetathreehat thetafourhat thetafivehat rhohat sigmasquaredhat];
+
+options  =  optimset('GradObj','off','LargeScale','off','Display','iter','TolFun',1e-14,'TolX',1e-14,'Diagnostics','on'); 
+[estimateprobitsys2,log_like,exitflag,output,Gradient,Hessianprobitsys2] = fminunc(@(x)llprobitsys([x],work,age,educ,parenteduc),thetanullhat,options);
+
+cov_Hessianprobitsys2 = inv(Hessianprobitsys2);
+std_probitsys2 = sqrt(diag(cov_Hessianprobitsys2));

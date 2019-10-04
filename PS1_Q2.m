@@ -54,6 +54,8 @@ beta_ols_se =  diag(sqrt( (1/rows(BLP_rhs)) * inv(BLP_rhs' * BLP_rhs) * (BLP_rhs
 
 %%
 %%%%%%%%%%%%%%%%%%%%%%%%
-% OLS
+% 2SLS: 
 %%%%%%%%%%%%%%%%%%%%%%%%
+
+
 

@@ -38,7 +38,9 @@ product_id_mat = repmat(product_id',rows(prod_dedupe),1)';
 
 prod_fe = prod_dedupe_mat == product_id_mat;
 
-BLP_rhs = horzcat(prod_fe,price,sugar,mushy);
+BLP_rhs = horzcat(price,sugar,mushy,prod_fe);
+
+%Now dedupe data
 
 %%
 %%%%%%%%%%%%%%%%%%%%%%%%
@@ -47,8 +49,13 @@ BLP_rhs = horzcat(prod_fe,price,sugar,mushy);
 
 beta_ols = inv(BLP_rhs' * BLP_rhs) * (BLP_rhs' * BLP_lhs);
 resid = BLP_lhs - BLP_rhs * beta_ols;
-beta_ols_se = 
+beta_ols_se =  diag(sqrt( (1/rows(BLP_rhs)) * inv(BLP_rhs' * BLP_rhs) * (BLP_rhs' * resid * resid' * BLP_rhs) * inv(BLP_rhs' * BLP_rhs)));
 
+
+%%
+%%%%%%%%%%%%%%%%%%%%%%%%
+% OLS: Lone one prof 
+%%%%%%%%%%%%%%%%%%%%%%%%
 
 
 

@@ -1,8 +1,8 @@
-function [log_like] = llprobitsys(x,y,x1,x2,z);
+function [log_like] = llprobitsys(theta,y,x1,x2,z);
     %debug 
     
     %{
-    x = thetanullhat;
+    theta = thetanullhat;
     y = work;
     x1 = age;
     x2 = educ;
@@ -16,21 +16,23 @@ function [log_like] = llprobitsys(x,y,x1,x2,z);
 
     for i = 1: rows(y) ;
         
-    mu(i) =  (x(1,8)/x(1,7)) ...
-        * (x2(i) - (x(1,4) + x(1,5) .* x1(i) + x(1,6) .* z(i) ) );
-    prob_y_1(i) = 1 - normcdf(-x(1,1) - x(1,2) .* x1(i) - x(1,3) .* x2(i) , ...
-        mu(i)  ...
-        , 1 -  (x(1,8)^2/x(1,7) ) );
+    mu(i) =  (theta(1,7)/theta(1,8)) ...
+        * (x2(i) - (theta(1,4) + theta(1,5) .* x1(i) + theta(1,6) .* z(i) ) );
+    var(i) = 1 -  (theta(1,7)^2/theta(1,8) );
+    
+    prob_y_1(i) = 1 - normcdf(-theta(1,1) - theta(1,2) .* x1(i) - theta(1,3) .* x2(i) , ...
+        mu(i), var(i) );
+    
         if  prob_y_1(i) > .9999999
-            prob_y_1(i) = .99;
+            prob_y_1(i) = .99999;
         end;
         if  prob_y_1(i)  < ( 1 - .9999999)
-            prob_y_1(i) = .01;
+            prob_y_1(i) = .00001;
         end;
         
-        prob_x_2(i) =  normpdf( mu(i) *  (x(1,7)/x(1,8)), 0, x(1,7));
+        prob_x_2(i) =  normpdf( mu(i) *  (theta(1,8)/theta(1,7)), 0, theta(1,8));
          if  prob_x_2(i)  < ( 1 - .9999999)
-            prob_x_2(i) = .01;
+            prob_x_2(i) = .00001;
         end;
     end;
         

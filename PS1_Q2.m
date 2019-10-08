@@ -32,13 +32,14 @@ expand_sum_market_share = subs_sum_market_share(subs(:,1));
 BLP_lhs = log(market_share) - log(1 - expand_sum_market_share);
 
 %create product fe
-prod_dedupe = unique(product_id);
-prod_dedupe_mat = repmat(prod_dedupe',rows(product_id),1);
-product_id_mat = repmat(product_id',rows(prod_dedupe),1)';
+%prod_dedupe = unique(product_id);
+%prod_dedupe_mat = repmat(prod_dedupe',rows(product_id),1);
+%product_id_mat = repmat(product_id',rows(prod_dedupe),1)';
 
-prod_fe = prod_dedupe_mat == product_id_mat;
+%prod_fe = prod_dedupe_mat == product_id_mat;
 
-BLP_rhs = horzcat(price,sugar,mushy,prod_fe);
+%BLP_rhs = horzcat(price,sugar,mushy,prod_fe);
+BLP_rhs = horzcat(price,sugar,mushy,ones(rows(price),1));
 
 %Now dedupe data
 
@@ -49,13 +50,25 @@ BLP_rhs = horzcat(price,sugar,mushy,prod_fe);
 
 beta_ols = inv(BLP_rhs' * BLP_rhs) * (BLP_rhs' * BLP_lhs);
 resid = BLP_lhs - BLP_rhs * beta_ols;
-beta_ols_se =  diag(sqrt( (1/rows(BLP_rhs)) * inv(BLP_rhs' * BLP_rhs) * (BLP_rhs' * resid * resid' * BLP_rhs) * inv(BLP_rhs' * BLP_rhs)));
+
+H0 = inv((1 / rows(BLP_rhs) ) * BLP_rhs' * BLP_rhs);
+
+V0 = zeros(4,4);
+for i = 1:rows(BLP_rhs);
+    add_one = BLP_rhs(i,:)' * BLP_rhs(i,:) * resid(i)^2;
+    V0 = V0 + add_one;
+end;
+
+V0 = V0 / (rows(BLP_rhs));
+
+se_beta_ols = diag(sqrt(H0 * V0 * H0 / rows(BLP_rhs) ));
 
 
 %%
 %%%%%%%%%%%%%%%%%%%%%%%%
 % 2SLS: 
 %%%%%%%%%%%%%%%%%%%%%%%%
+
 
 
 

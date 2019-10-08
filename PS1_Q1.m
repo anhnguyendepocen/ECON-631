@@ -55,41 +55,99 @@ std_logit = sqrt(diag(cov_Hessianlogit));
 %%%%%%%%%%%%%%%%%%%%%%%%
 % q1.6:  Run Systems Probit
 %%%%%%%%%%%%%%%%%%%%%%%%
-
-thetazerohat = estimateprobit(1,1);
-thetaonehat = estimateprobit(1,2);
-thetatwohat = estimateprobit(1,3);
+thetazerohat = 0;
+thetaonehat = 0;
+thetatwohat = 0;
 thetathreehat = 0;
 thetafourhat = 0;
 thetafivehat = 0;
-rhohat = 1;
-sigmasquaredhat = .5;
+rhohat = .01;
+sigmasquaredhat = .01;
 
 thetanullhat =  [thetazerohat thetaonehat thetatwohat thetathreehat thetafourhat thetafivehat rhohat sigmasquaredhat];
 
 options  =  optimset('GradObj','off','LargeScale','off','Display','iter','TolFun',1e-14,'TolX',1e-14,'Diagnostics','on'); 
-[estimateprobitsys,log_like,exitflag,output,Gradient,Hessianprobitsys] = fminunc(@(x)llprobitsys([x],work,age,educ,parenteduc),thetanullhat,options);
+[estimateprobitsys,log_like_probitsys,exitflag,output,Gradient,Hessianprobitsys] = fminunc(@(x)llprobitsys([x],work,age,educ,parenteduc),thetanullhat,options);
 
 cov_Hessianprobitsys = inv(Hessianprobitsys);
 std_probitsys = sqrt(diag(cov_Hessianprobitsys));
+
 
 %%
 %Verify not sensitive to initial guesses
 
 
-thetazerohat = .1;
-thetaonehat = .1;
-thetatwohat = .1;
-thetathreehat = .1;
-thetafourhat = .1;
-thetafivehat = .1;
-rhohat = .1;
-sigmasquaredhat = .2;
+thetazerohat = estimateprobit(1,1) ;
+thetaonehat = estimateprobit(1,2) ;
+thetatwohat = estimateprobit(1,3) ;
+thetathreehat = 0;
+thetafourhat = 0;
+thetafivehat = 0;
+rhohat = 1;
+sigmasquaredhat = 2;
 
 thetanullhat =  [thetazerohat thetaonehat thetatwohat thetathreehat thetafourhat thetafivehat rhohat sigmasquaredhat];
 
 options  =  optimset('GradObj','off','LargeScale','off','Display','iter','TolFun',1e-14,'TolX',1e-14,'Diagnostics','on'); 
-[estimateprobitsys2,log_like,exitflag,output,Gradient,Hessianprobitsys2] = fminunc(@(x)llprobitsys([x],work,age,educ,parenteduc),thetanullhat,options);
+[estimateprobitsys2,log_like_probitsys2,exitflag,output,Gradient,Hessianprobitsys2] = fminunc(@(x)llprobitsys([x],work,age,educ,parenteduc),thetanullhat,options);
 
 cov_Hessianprobitsys2 = inv(Hessianprobitsys2);
 std_probitsys2 = sqrt(diag(cov_Hessianprobitsys2));
+
+%%
+%Verify not sensitive to initial guesses
+
+
+thetazerohat = .1 ;
+thetaonehat = .1 ;
+thetatwohat = .1;
+thetathreehat = .1;
+thetafourhat = .1;
+thetafivehat = .1;
+rhohat = 1;
+sigmasquaredhat = 2;
+
+thetanullhat =  [thetazerohat thetaonehat thetatwohat thetathreehat thetafourhat thetafivehat rhohat sigmasquaredhat];
+
+options  =  optimset('GradObj','off','LargeScale','off','Display','iter','TolFun',1e-14,'TolX',1e-14,'Diagnostics','on','MaxFunEvals',200000,'MaxIter',1000); 
+[estimateprobitsys3,log_like_probitsys3,exitflag,output,Gradient,Hessianprobitsys2] = fminunc(@(x)llprobitsys([x],work,age,educ,parenteduc),thetanullhat,options);
+
+cov_Hessianprobitsys3 = inv(Hessianprobitsys3);
+std_probitsys3 = sqrt(diag(cov_Hessianprobitsys3));
+
+%%
+%now try with initial values but other optimizer
+%%%%%%%%%%%%%%%%%%%%%%%%
+thetazerohat = 0;
+thetaonehat = 0;
+thetatwohat = 0;
+thetathreehat = 0;
+thetafourhat = 0;
+thetafivehat = 0;
+rhohat = .01;
+sigmasquaredhat = .01;
+
+thetanullhat =  [thetazerohat thetaonehat thetatwohat thetathreehat thetafourhat thetafivehat rhohat sigmasquaredhat];
+
+%options  =  optimset('GradObj','off','LargeScale','off','Display','iter','TolFun',1e-14,'TolX',1e-14,'Diagnostics','on'); 
+[estimateprobitsys_search,log_like_probitsys_search] = fminsearch(@(x)llprobitsys([x],work,age,educ,parenteduc),thetanullhat,options);
+
+thetazerohat = estimateprobit(1,1) ;
+thetaonehat = estimateprobit(1,2) ;
+thetatwohat = estimateprobit(1,3) ;
+thetathreehat = 0;
+thetafourhat = 0;
+thetafivehat = 0;
+rhohat = 1;
+sigmasquaredhat = 2;
+
+thetanullhat =  [thetazerohat thetaonehat thetatwohat thetathreehat thetafourhat thetafivehat rhohat sigmasquaredhat];
+
+[estimateprobitsys_search2,log_like_probitsys_search2] = fminsearch(@(x)llprobitsys([x],work,age,educ,parenteduc),thetanullhat,options);
+
+thetanullhat =  estimateprobitsys2;
+
+[estimateprobitsys_search3,log_like_probitsys_search3] = fminsearch(@(x)llprobitsys([x],work,age,educ,parenteduc),thetanullhat,options);
+
+%%
+out_probitsys2 = round(estimateprobitsys2,4);

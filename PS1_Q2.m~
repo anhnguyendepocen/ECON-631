@@ -53,16 +53,34 @@ resid = BLP_lhs - BLP_rhs * beta_ols;
 
 H0 = inv((1 / rows(BLP_rhs) ) * BLP_rhs' * BLP_rhs);
 
-V0 = zeros(4,4)
+V0 = zeros(4,4);
 for i = 1:rows(BLP_rhs);
-    add_one = BLP_
-    
+    add_one = BLP_rhs(i,:)' * BLP_rhs(i,:) * resid(i)^2;
+    V0 = V0 + add_one;
+end;
+
+V0 = V0 / (rows(BLP_rhs));
+
+se_beta_ols = diag(sqrt(H0 * V0 * H0 / rows(BLP_rhs) ));
 
 
 %%
 %%%%%%%%%%%%%%%%%%%%%%%%
 % 2SLS: 
 %%%%%%%%%%%%%%%%%%%%%%%%
+
+%is it ok to include other products' prices?
+
+firm_prod_atr = horzcat(firm_id,product_id,price,sugar,mushy,ones(rows(mushy),1));
+dedupe_firm_prod_atr = unique(firm_prod_atr,'rows');
+
+%verify only price that has het
+firm_prod_atr_noprice = horzcat(firm_id,product_id,sugar,mushy,ones(rows(mushy),1));
+dedupe_firm_prod_atre_nopric = unique(firm_prod_atr_noprice,'rows');
+
+
+
+
 
 
 

@@ -107,13 +107,34 @@ thetafivehat = .1;
 rhohat = 1;
 sigmasquaredhat = 2;
 
+
 thetanullhat =  [thetazerohat thetaonehat thetatwohat thetathreehat thetafourhat thetafivehat rhohat sigmasquaredhat];
 
 options  =  optimset('GradObj','off','LargeScale','off','Display','iter','TolFun',1e-14,'TolX',1e-14,'Diagnostics','on','MaxFunEvals',200000,'MaxIter',1000); 
-[estimateprobitsys3,log_like_probitsys3,exitflag,output,Gradient,Hessianprobitsys2] = fminunc(@(x)llprobitsys([x],work,age,educ,parenteduc),thetanullhat,options);
+[estimateprobitsys3,log_like_probitsys3,exitflag,output,Gradient,Hessianprobitsys3] = fminunc(@(x)llprobitsys([x],work,age,educ,parenteduc),thetanullhat,options);
 
 cov_Hessianprobitsys3 = inv(Hessianprobitsys3);
 std_probitsys3 = sqrt(diag(cov_Hessianprobitsys3));
+
+%%
+
+thetazerohat = estimateprobit(1,1) ;
+thetaonehat = estimateprobit(1,2) ;
+thetatwohat = estimateprobit(1,3) ;
+thetathreehat = 0;
+thetafourhat = 0;
+thetafivehat = 0;
+rhohat = .1;
+sigmasquaredhat = 2;
+
+thetanullhat =  [thetazerohat thetaonehat thetatwohat thetathreehat thetafourhat thetafivehat rhohat sigmasquaredhat];
+
+options  =  optimset('GradObj','off','LargeScale','off','Display','iter','TolFun',1e-14,'TolX',1e-14,'Diagnostics','on','MaxFunEvals',200000,'MaxIter',1000); 
+[estimateprobitsys4,log_like_probitsys4,exitflag,output,Gradient,Hessianprobitsys4] = fminunc(@(x)llprobitsys([x],work,age,educ,parenteduc),thetanullhat,options);
+
+cov_Hessianprobitsys4 = inv(Hessianprobitsys4);
+std_probitsys4 = sqrt(diag(cov_Hessianprobitsys4));
+
 
 %%
 %now try with initial values but other optimizer
@@ -150,4 +171,8 @@ thetanullhat =  estimateprobitsys2;
 [estimateprobitsys_search3,log_like_probitsys_search3] = fminsearch(@(x)llprobitsys([x],work,age,educ,parenteduc),thetanullhat,options);
 
 %%
-out_probitsys2 = round(estimateprobitsys2,4);
+%Compare to Tyler
+
+theta = [0 0 0 0 0 0 1 2];
+theta = estimateprobitsys3;
+theta(1,7) = .1173;

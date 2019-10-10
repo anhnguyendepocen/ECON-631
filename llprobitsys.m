@@ -11,7 +11,7 @@ function [log_like] = llprobitsys(theta,y,x1,x2,z);
     
     % Probability
     prob_y_1 = zeros(rows(y),1);
-    mu = zeros(rows(y),1);
+    mu = zeros(rows(y),1); 
     prob_x_2 = zeros(rows(y),1);
 
     for i = 1: rows(y) ;

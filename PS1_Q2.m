@@ -68,6 +68,33 @@ se_beta_ols = diag(sqrt(H0 * V0 * H0 / rows(BLP_rhs) ));
 %%%%%%%%%%%%%%%%%%%%%%%%
 % 2SLS: 
 %%%%%%%%%%%%%%%%%%%%%%%%
+%remove firm six as no other products
+
+not_firm_six = firm_id ~= 6; 
+
+check_subset = firmid(not_firm_six,:);
+
+firm_prod_city_date_group = horzcat(firm_id,product_id,city,year,quarter,findgroups(firm_id,product_id,city,year,quarter));
+
+%first find sums at product and firm level; then at firm level
+total_sugar_firm_prod_city_date = accumarray(firm_prod_group(:,6),sugar);
+total_mushy_firm_prod_city_date = accumarray(firm_prod_group(:,6),mushy);
+total_counts_firm_prod_city_date = accumarray(firm_prod_group(:,6),ones(rows(firm_prod_city_date_group),1));
+
+total_sugar_firm_prod_city_date_expand = total_sugar_firm_prod(firm_prod_group(:,6),:);
+total_mushy_firm_prod_city_date_expand = total_mushy_firm_prod(firm_prod_group(:,6),:);
+total_counts_firm_prod_city_date_expand = total_counts_firm_prod(firm_prod_group(:,6),:);
+
+denom = total_counts_firm_expand - total_counts_firm_prod_expand;
+
+avg_price_same_firm = (total_price_firm_expand - total_price_firm_prod_expand) ...
+                   ./ (total_counts_firm_expand - total_counts_firm_prod_expand);
+avg_sugar_same_firm = (total_sugar_firm_expand - total_sugar_firm_prod_expand) ...
+                    ./ (total_counts_firm_expand - total_counts_firm_prod_expand);
+avg_mushy_same_firm = (total_mushy_firm_expand - total_mushy_firm_prod_expand) ...
+                    ./ (total_counts_firm_expand - total_counts_firm_prod_expand);
+                 
+                 
 
 
 

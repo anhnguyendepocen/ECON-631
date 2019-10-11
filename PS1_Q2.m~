@@ -31,14 +31,6 @@ expand_sum_market_share = subs_sum_market_share(subs(:,1));
 
 BLP_lhs = log(market_share) - log(1 - expand_sum_market_share);
 
-%create product fe
-%prod_dedupe = unique(product_id);
-%prod_dedupe_mat = repmat(prod_dedupe',rows(product_id),1);
-%product_id_mat = repmat(product_id',rows(prod_dedupe),1)';
-
-%prod_fe = prod_dedupe_mat == product_id_mat;
-
-%BLP_rhs = horzcat(price,sugar,mushy,prod_fe);
 BLP_rhs = horzcat(price,sugar,mushy,ones(rows(price),1));
 
 %Now dedupe data
@@ -66,21 +58,68 @@ se_beta_ols = diag(sqrt(H0 * V0 * H0 / rows(BLP_rhs) ));
 
 %%
 %%%%%%%%%%%%%%%%%%%%%%%%
-% 2SLS: 
+% 2SLS: OWN PRODUCTS
 %%%%%%%%%%%%%%%%%%%%%%%%
 
-%is it ok to include other products' prices?
+firm_city_date_group = horzcat(firm_id,city,year,quarter,findgroups(firm_id,city,year,quarter));
 
-firm_prod_atr = horzcat(firm_id,product_id,price,sugar,mushy,ones(rows(mushy),1));
-dedupe_firm_prod_atr = unique(firm_prod_atr,'rows');
+%first find sums at product and firm level; then at firm level
+total_sugar_firm_city_date = accumarray(firm_city_date_group(:,5),sugar);
+total_mushy_firm_city_date = accumarray(firm_city_date_group(:,5),mushy);
+total_counts_firm_city_date = accumarray(firm_city_date_group(:,5),ones(rows(firm_city_date_group),1));
 
-%verify only price that has het
-firm_prod_atr_noprice = horzcat(firm_id,product_id,sugar,mushy,ones(rows(mushy),1));
-dedupe_firm_prod_atre_nopric = unique(firm_prod_atr_noprice,'rows');
+total_sugar_firm_city_date_expand = total_sugar_firm_city_date(firm_city_date_group(:,5),:);
+total_mushy_firm_city_date_expand = total_mushy_firm_city_date(firm_city_date_group(:,5),:);
+total_counts_firm_city_date_expand = total_counts_firm_city_date(firm_city_date_group(:,5),:);
 
+denom = total_counts_firm_city_date_expand - 1;
 
+avg_sugar_same_firm = (total_sugar_firm_city_date_expand - sugar) ...
+                    ./ denom;
+avg_mushy_same_firm = (total_mushy_firm_city_date_expand - mushy) ...
+                    ./ denom;
+                 
+%remove firm six as no other products
+not_firm_six = firm_id ~= 6; 
 
+avg_sugar_same_firm_nosix = avg_sugar_same_firm(not_firm_six,:);
+avg_mushy_same_firm_nosix = avg_mushy_same_firm(not_firm_six,:);
+price_nosix = price(not_firm_six,:);
+BLP_lhs_nosix = BLP_lhs(not_firm_six,:);
+%%
+%Estimate 2SLS
 
+instruments_samefirm = horzcat(avg_sugar_same_firm_nosix,avg_mushy_same_firm_nosix,...
+                ones(rows(price_nosix),1));
+%Fist Stage
+first_stage_beta_hat = inv(instruments_samefirm' * instruments_samefirm) * (instruments_samefirm' * price_nosix);
+price_hat = instruments_samefirm * first_stage_beta_hat;
+
+%Second Stage
+sugar_nosix = sugar(not_firm_six,:);
+mushy_nosix = mushy(not_firm_six,:);
+BLP_rhs_samefirm = horzcat(price_hat,sugar_nosix,mushy_nosix,...
+                    ones(rows(sugar_nosix),1));
+beta_2SLS = inv(BLP_rhs_samefirm' * BLP_rhs_samefirm) * (BLP_rhs_samefirm' * BLP_lhs_nosix);
+               
+            
+
+%%
+%%%%%%%%%%%%%%%%%%%%%%%%
+% 2SLS: RIVAL PRODUCTS
+%%%%%%%%%%%%%%%%%%%%%%%%
+city_date_group = horzcat(city,year,quarter,findgroups(city,year,quarter));
+
+total_sugar_city_date = accumarray(city_date_group(:,4),sugar);
+total_mushy_city_date = accumarray(city_date_group(:,4),mushy);
+total_counts_city_date = accumarray(city_date_group(:,4),ones(rows(city_date_group),1));
+
+total_sugar_city_date_expand = total_sugar_city_date(city_date_group(:,4),:);
+total_mushy_city_date_expand = total_mushy_city_date(city_date_group(:,4),:);
+total_counts_city_date_expand = total_counts_city_date(city_date_group(:,4),:);
+
+rivals_sugar_city_date = total_sugar_city_date_expand - total_sugar_firm_city_date_expand;
+rivals_sugar_city_date = total_sugar_city_date_expand - total_sugar_firm_city_date_expand;
 
 
 

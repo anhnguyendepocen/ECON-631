@@ -1,7 +1,7 @@
 function [gmm_obj] = blp_gmm(sigma,initial,shares,sims,x,price,instruments,tol);
  
-    blp_counter = .5;
-    blp_counter = blp_counter + .5
+    %blp_counter = .5;
+    %blp_counter = blp_counter + .5
 
 
 %%
@@ -43,21 +43,22 @@ function [gmm_obj] = blp_gmm(sigma,initial,shares,sims,x,price,instruments,tol);
    
    %%
    %IV Regression to back out the betas and price sensitivity
-   first_stage_lhs = horzcat(instruments,ones(rows(instruments),1));
-   beta_price_hat = inv(first_stage_lhs' * first_stage_lhs) * (first_stage_lhs' * price);
-   price_hat = first_stage_lhs * beta_price_hat;
-   
-   BLP_LHS = horzcat(x,price_hat,ones(rows(x),1));
-   beta_blp = inv(BLP_LHS' * BLP_LHS) * (BLP_LHS' * delta_curr);
-   
+   for_z = horzcat(x,instruments); 
+   P_Z_samefirm = for_z * inv(for_z' * for_z) ...
+                    * for_z';
+    X_nosix = horzcat(price,x,ones(rows(x),1));
+
+    beta_2SLS_samefirm = inv(X_nosix' *  P_Z_samefirm * X_nosix) ...
+                            * (X_nosix' *  P_Z_samefirm * delta_curr);  
+
    
    %%
    %compute obj fct val
-   iv_resid = delta_curr - BLP_LHS * beta_blp;
+   iv_resid =  delta_curr -  P_Z_samefirm * X_nosix * beta_2SLS_samefirm;
    pre_gmm_resid = iv_resid' * instruments;
    gmm_resid = pre_gmm_resid * pre_gmm_resid';
    gmm_obj = gmm_resid;
    
-   blp_counter = blp_counter + .5
+   %blp_counter = blp_counter + .5
    
 end

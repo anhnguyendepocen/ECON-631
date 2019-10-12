@@ -125,7 +125,7 @@ options = optimset('Display','iter');
    for_z = horzcat(x,instruments); 
    P_Z_samefirm = for_z * inv(for_z' * for_z) ...
                     * for_z';
-    X_nosix = horzcat(price,x,ones(rows(x),1));
+    X_nosix = horzcat(price_nosix,x,ones(rows(x),1));
 
     beta_blp = inv(X_nosix' *  P_Z_samefirm * X_nosix) ...
                             * (X_nosix' *  P_Z_samefirm * delta_curr);  

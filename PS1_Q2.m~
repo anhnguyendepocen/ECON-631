@@ -60,6 +60,7 @@ se_beta_ols = diag(sqrt(H0 * V0 * H0 / rows(BLP_rhs) ));
 %%%%%%%%%%%%%%%%%%%%%%%%
 % 2SLS: OWN PRODUCTS
 %%%%%%%%%%%%%%%%%%%%%%%%
+%Prep Data
 
 firm_city_date_group = horzcat(firm_id,city,year,quarter,findgroups(firm_id,city,year,quarter));
 
@@ -87,27 +88,50 @@ avg_mushy_same_firm_nosix = avg_mushy_same_firm(not_firm_six,:);
 price_nosix = price(not_firm_six,:);
 BLP_lhs_nosix = BLP_lhs(not_firm_six,:);
 %%
-%Estimate 2SLS
+%Estimate 2SLS with Own Prods
 
-instruments_samefirm = horzcat(avg_sugar_same_firm_nosix,avg_mushy_same_firm_nosix,...
-                ones(rows(price_nosix),1));
-%Fist Stage
-first_stage_beta_hat = inv(instruments_samefirm' * instruments_samefirm) * (instruments_samefirm' * price_nosix);
-price_hat = instruments_samefirm * first_stage_beta_hat;
-
-%Second Stage
 sugar_nosix = sugar(not_firm_six,:);
 mushy_nosix = mushy(not_firm_six,:);
-BLP_rhs_samefirm = horzcat(price_hat,sugar_nosix,mushy_nosix,...
-                    ones(rows(sugar_nosix),1));
-beta_2SLS = inv(BLP_rhs_samefirm' * BLP_rhs_samefirm) * (BLP_rhs_samefirm' * BLP_lhs_nosix);
-               
-            
+
+instruments_samefirm = horzcat(avg_sugar_same_firm_nosix,avg_mushy_same_firm_nosix,...
+                sugar_nosix,mushy_nosix, ones(rows(price_nosix),1));
+
+%Point Estimate            
+P_Z_samefirm = instruments_samefirm * inv(instruments_samefirm' * instruments_samefirm) ...
+                    * instruments_samefirm';
+X_nosix = horzcat(price_nosix,sugar_nosix,mushy_nosix,ones(rows(mushy_nosix),1));
+
+beta_2SLS_samefirm = inv(X_nosix' *  P_Z_samefirm * X_nosix) ...
+                            * (X_nosix' *  P_Z_samefirm * BLP_lhs_nosix);  
+                        
+%Standard Error
+resid = BLP_lhs_nosix -  P_Z_samefirm * X_nosix * beta_2SLS_samefirm;
+sum_x_z_price_nosix = 0;
+sum_z_z_prime_nosix = 0;
+sum_z_x_prime_nosix = 0;
+sum_z_eps_eps_prime_z_prime = 0;
+
+for i = 1: rows(resid);
+      sum_x_z_price_nosix = sum_x_z_price_nosix ...
+                        + X_nosix(i,:)' * instruments_samefirm(i,:);
+      sum_z_z_prime_nosix = sum_z_z_prime_nosix ...
+                        + instruments_samefirm(i,:)' * instruments_samefirm(i,:);
+      sum_z_x_prime_nosix = sum_z_x_prime_nosix ...
+                         + instruments_samefirm(i,:)' * X_nosix(i,:);
+                    
+      sum_z_eps_eps_prime_z_prime = sum_z_eps_eps_prime_z_prime ...
+          
+                    
+      
+
+                
 
 %%
 %%%%%%%%%%%%%%%%%%%%%%%%
 % 2SLS: RIVAL PRODUCTS
 %%%%%%%%%%%%%%%%%%%%%%%%
+%Prep Data
+
 city_date_group = horzcat(city,year,quarter,findgroups(city,year,quarter));
 
 total_sugar_city_date = accumarray(city_date_group(:,4),sugar);
@@ -119,8 +143,24 @@ total_mushy_city_date_expand = total_mushy_city_date(city_date_group(:,4),:);
 total_counts_city_date_expand = total_counts_city_date(city_date_group(:,4),:);
 
 rivals_sugar_city_date = total_sugar_city_date_expand - total_sugar_firm_city_date_expand;
-rivals_sugar_city_date = total_sugar_city_date_expand - total_sugar_firm_city_date_expand;
+rivals_mushy_city_date = total_mushy_city_date_expand - total_mushy_firm_city_date_expand;
+rivals_denom = total_counts_city_date_expand - total_counts_firm_city_date_expand;
 
+avg_sugar_rivals = rivals_sugar_city_date ./ rivals_denom;
+avg_mushy_rivals = rivals_mushy_city_date ./ rivals_denom;
 
+%%
+%Estimate 2SLS with Rival Prods
+instruments_rivalfirm = horzcat(avg_sugar_rivals,avg_mushy_rivals,...
+                ones(rows(price),1));
 
+%First Stage
+first_stage_beta_hat_rival = inv(instruments_rivalfirm' * instruments_rivalfirm) * (instruments_rivalfirm' * price);
+price_hat_rival = instruments_rivalfirm * first_stage_beta_hat_rival;
 
+%Second Stage
+BLP_rhs_rival = horzcat(price_hat_rival,sugar,mushy,...
+                    ones(rows(sugar),1));
+beta_2SLS_rival = inv(BLP_rhs_rival' * BLP_rhs_rival) * (BLP_rhs_rival' * BLP_lhs);
+               
+   

@@ -33,8 +33,6 @@ BLP_lhs = log(market_share) - log(1 - expand_sum_market_share);
 
 BLP_rhs = horzcat(price,sugar,mushy,ones(rows(price),1));
 
-%Now dedupe data
-
 %%
 %%%%%%%%%%%%%%%%%%%%%%%%
 % OLS
@@ -90,20 +88,51 @@ BLP_lhs_nosix = BLP_lhs(not_firm_six,:);
 %%
 %Estimate 2SLS with Own Prods
 
-instruments_samefirm = horzcat(avg_sugar_same_firm_nosix,avg_mushy_same_firm_nosix,...
-                ones(rows(price_nosix),1));
-%Fist Stage
-first_stage_beta_hat_samefirm = inv(instruments_samefirm' * instruments_samefirm) * (instruments_samefirm' * price_nosix);
-price_hat_samefirm = instruments_samefirm * first_stage_beta_hat_samefirm;
-
-%Second Stage
 sugar_nosix = sugar(not_firm_six,:);
 mushy_nosix = mushy(not_firm_six,:);
-BLP_rhs_samefirm = horzcat(price_hat_samefirm,sugar_nosix,mushy_nosix,...
-                    ones(rows(sugar_nosix),1));
-beta_2SLS_samefirm = inv(BLP_rhs_samefirm' * BLP_rhs_samefirm) * (BLP_rhs_samefirm' * BLP_lhs_nosix);
-               
-            
+
+instruments_samefirm = horzcat(avg_sugar_same_firm_nosix,avg_mushy_same_firm_nosix,...
+                sugar_nosix,mushy_nosix, ones(rows(price_nosix),1));
+
+%Point Estimate            
+P_Z_samefirm = instruments_samefirm * inv(instruments_samefirm' * instruments_samefirm) ...
+                    * instruments_samefirm';
+X_nosix = horzcat(price_nosix,sugar_nosix,mushy_nosix,ones(rows(mushy_nosix),1));
+
+beta_2SLS_samefirm = inv(X_nosix' *  P_Z_samefirm * X_nosix) ...
+                            * (X_nosix' *  P_Z_samefirm * BLP_lhs_nosix);  
+
+ %%                       
+%Standard Error
+resid_samefirm = BLP_lhs_nosix -  P_Z_samefirm * X_nosix * beta_2SLS_samefirm;
+sum_x_z_prime_nosix = 0;
+sum_z_z_prime_nosix = 0;
+sum_z_x_prime_nosix = 0;
+sum_z_eps_eps_prime_z_prime = 0;
+
+for i = 1: rows(resid_samefirm);
+      sum_x_z_prime_nosix = sum_x_z_prime_nosix ...
+                        + X_nosix(i,:)' * instruments_samefirm(i,:);
+      sum_z_z_prime_nosix = sum_z_z_prime_nosix ...
+                        + instruments_samefirm(i,:)' * instruments_samefirm(i,:);
+      sum_z_x_prime_nosix = sum_z_x_prime_nosix ...
+                         + instruments_samefirm(i,:)' * X_nosix(i,:);
+      sum_z_eps_eps_prime_z_prime = sum_z_eps_eps_prime_z_prime ...
+          + resid_samefirm(i)^2 * instruments_samefirm(i,:)' * instruments_samefirm(i,:);
+                    
+end;
+
+exp_x_z_prime_nosix = sum_x_z_prime_nosix ./ rows(resid_samefirm);
+exp_z_z_prime_nosix = sum_z_z_prime_nosix ./ rows(resid_samefirm);
+exp_z_x_prime_nosix = sum_z_x_prime_nosix ./ rows(resid_samefirm);
+exp_z_eps_eps_prime_z_prime = sum_z_eps_eps_prime_z_prime ./ rows(resid_samefirm);
+
+all_non_var = inv(exp_x_z_prime_nosix * inv(exp_z_z_prime_nosix) * exp_z_x_prime_nosix) ...
+    * exp_x_z_prime_nosix  * inv(exp_z_z_prime_nosix);
+
+matrix_2SLS_samefirm = all_non_var * exp_z_eps_eps_prime_z_prime * all_non_var';
+                
+se_2SLS_samefirm = diag(sqrt(matrix_2SLS_samefirm / rows(resid_samefirm) ) );
 
 %%
 %%%%%%%%%%%%%%%%%%%%%%%%
@@ -131,15 +160,43 @@ avg_mushy_rivals = rivals_mushy_city_date ./ rivals_denom;
 %%
 %Estimate 2SLS with Rival Prods
 instruments_rivalfirm = horzcat(avg_sugar_rivals,avg_mushy_rivals,...
-                ones(rows(price),1));
+                sugar,mushy,ones(rows(price),1));
+%Point Estimate            
+P_Z_rivalfirm = instruments_rivalfirm * inv(instruments_rivalfirm' * instruments_rivalfirm) ...
+                    * instruments_rivalfirm';
+X = horzcat(price,sugar,mushy,ones(rows(mushy),1));
 
-%First Stage
-first_stage_beta_hat_rival = inv(instruments_rivalfirm' * instruments_rivalfirm) * (instruments_rivalfirm' * price);
-price_hat_rival = instruments_rivalfirm * first_stage_beta_hat_rival;
+beta_2SLS_rivalfirm = inv(X' *  P_Z_rivalfirm * X) ...
+                            * (X' *  P_Z_rivalfirm * BLP_lhs);  
 
-%Second Stage
-BLP_rhs_rival = horzcat(price_hat_rival,sugar,mushy,...
-                    ones(rows(sugar),1));
-beta_2SLS_rival = inv(BLP_rhs_rival' * BLP_rhs_rival) * (BLP_rhs_rival' * BLP_lhs);
-               
-   
+ %%                       
+%Standard Error
+resid_rivalfirm = BLP_lhs -  P_Z_rivalfirm * X * beta_2SLS_rivalfirm;
+sum_x_z_prime = 0;
+sum_z_z_prime = 0;
+sum_z_x_prime = 0;
+sum_z_eps_eps_prime_z_prime = 0;
+
+for i = 1: rows(resid_rivalfirm);
+      sum_x_z_prime = sum_x_z_prime ...
+                        + X(i,:)' * instruments_rivalfirm(i,:);
+      sum_z_z_prime = sum_z_z_prime ...
+                        + instruments_rivalfirm(i,:)' * instruments_rivalfirm(i,:);
+      sum_z_x_prime = sum_z_x_prime ...
+                         + instruments_rivalfirm(i,:)' * X(i,:);
+      sum_z_eps_eps_prime_z_prime = sum_z_eps_eps_prime_z_prime ...
+          + resid_rivalfirm(i)^2 * instruments_rivalfirm(i,:)' * instruments_rivalfirm(i,:);
+                    
+end;
+
+exp_x_z_prime = sum_x_z_prime ./ rows(resid_rivalfirm);
+exp_z_z_prime = sum_z_z_prime ./ rows(resid_rivalfirm);
+exp_z_x_prime = sum_z_x_prime ./ rows(resid_rivalfirm);
+exp_z_eps_eps_prime_z_prime = sum_z_eps_eps_prime_z_prime ./ rows(resid_rivalfirm);
+
+all_non_var = inv(exp_x_z_prime * inv(exp_z_z_prime) * exp_z_x_prime) ...
+    * exp_x_z_prime  * inv(exp_z_z_prime);
+
+matrix_2SLS_rivalfirm = all_non_var * exp_z_eps_eps_prime_z_prime * all_non_var';
+                
+se_2SLS_rivalfirm = diag(sqrt(matrix_2SLS_rivalfirm / rows(resid_rivalfirm) ) );

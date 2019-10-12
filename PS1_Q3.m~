@@ -22,7 +22,7 @@ mushy =  table2array(data(:,9));
 %  Simulation Draws
 %%%%%%%%%%%%%%%%%%%%%%%%
 
-norm_rnd = normrnd(0,1,[5000,1]);
+norm_rnd = normrnd(0,1,[5000,3]);
 
 
 %%
@@ -44,12 +44,8 @@ BLP_rhs = horzcat(price,sugar,mushy,ones(rows(price),1));
 
 beta_ols = inv(BLP_rhs' * BLP_rhs) * (BLP_rhs' * BLP_lhs);
 utility_hat = BLP_rhs * beta_ols;
-mean_utility_all_prod = accumarray(product_id,utility_hat,[],@mean);
-unique_prod_ids = unique(product_id);
-mean_utility_act_prod = mean_utility_all_prod(unique_prod_ids,:);
-
-tol = 10 ^ -14;
-
+mean_utility = accumarray(product_id,utility_hat,[],@mean);
+mean_utility
 
 
 

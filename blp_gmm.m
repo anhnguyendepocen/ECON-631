@@ -1,47 +1,63 @@
-function [gmm_obj] = blp_gmm(sigma,initial,shares,sims,x,price,instruments,tol,prod_ids);
+function [gmm_obj] = blp_gmm(sigma,initial,shares,sims,x,price,instruments,tol);
  
-    sigma = [.4 .5 .6];
-    tol = 10 ^ -14;
+    blp_counter = .5;
+    blp_counter = blp_counter + .5
+
+
+%%
+%{
+    sigma = [.4 .5];
+    tol = 10 ^ -11;
     shares = market_share;
     sims = norm_rnd;
     x = horzcat(sugar,mushy);
     price = price;
-    initial = mean_utility_by_prod;
-    prod = product_id;
-    
+    initial = mean_utility;
+    instruments = instruments;
+ %}   
     %%
-    %Berry Inverstion:
+    %Berry Inverstion:  
+    sigma_exp = exp(sigma);
+    
     delta_curr = initial;
     distance = 1;
+    iter = 0;
     
-    unique_prod_ids = unique(prod);
-    pre_unique_prod_ids_row = 1:1:rows(unique_prod_ids);
-    unique_prod_ids_row = horzcat(unique_prod_ids,pre_unique_prod_ids_row');
-    
-    %%CREATE LIST OF PROD ID BY ROW: SO FOR EACH PROD ID SAYS WHAT ROW
-    %%SHOULD BE
-    prod_lookup = horzcat(prod,zeros(rows(prod),1));
-    
-    for i = 1: rows(prod_lookup);
-        prod_to_check = prod_lookup(i,1);
-        same_prod = repmat(prod_to_check,rows(unique_prod_ids_row),1) == unique_prod_ids_row(:,1);
-        lookup_num = max(same_prod .* unique_prod_ids_row(:,2));
-        prod_lookup(i,2) = lookup_num;
-    end;
-
+    distance_tracker = ones(10000,1);
 
    while distance > tol;
        
-     delta_curr_expand = delta_curr(prod_lookup(:,2),:);
-     for_random = horzcat(sugar,mushy,ones(rows(sugar),1));
-     simul_random = for_random * (sigma' .* sims');
-     share_num = exp(delta_curr_expand .* ones() +  simul_random);
-     
-        
-    
-    distance = sum(abs(delta_curr-delta_next));
-    delta_curr = delta_next;
+     attributes = x;
+     idiosyncratic_utility = attributes * (sigma_exp' .* sims');
+     share_numerator_hat = exp(delta_curr .* ones(rows(delta_curr),columns(idiosyncratic_utility)) ...
+         +  idiosyncratic_utility);
+     share_hat = share_numerator_hat ./ (1 +  share_numerator_hat);
+     mean_share_hat = mean(share_hat,2);
+     delta_next = delta_curr + log(shares) - log(mean_share_hat);
+     distance = sum(abs(delta_next - delta_curr));
+      
+     delta_curr = delta_next;
+     iter = iter + 1;
+     distance_tracker(iter) = distance;
    end;
    
-    gmm_obj = XX;
+   %%
+   %IV Regression to back out the betas and price sensitivity
+   first_stage_lhs = horzcat(instruments,ones(rows(instruments),1));
+   beta_price_hat = inv(first_stage_lhs' * first_stage_lhs) * (first_stage_lhs' * price);
+   price_hat = first_stage_lhs * beta_price_hat;
+   
+   BLP_LHS = horzcat(x,price_hat,ones(rows(x),1));
+   beta_blp = inv(BLP_LHS' * BLP_LHS) * (BLP_LHS' * delta_curr);
+   
+   
+   %%
+   %compute obj fct val
+   iv_resid = delta_curr - BLP_LHS * beta_blp;
+   pre_gmm_resid = iv_resid' * instruments;
+   gmm_resid = pre_gmm_resid * pre_gmm_resid';
+   gmm_obj = gmm_resid;
+   
+   blp_counter = blp_counter + .5
+   
 end

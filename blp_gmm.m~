@@ -11,7 +11,7 @@ function [gmm_obj] = blp_gmm(sigma,initial,shares,sims,x,price,instruments,tol,m
     shares = market_share_nosix;
     sims = norm_rnd;
     x = horzcat(sugar_nosix,mushy_nosix);
-    price = price_nosix;
+    price = price;
     initial = mean_utility;
     instruments = instruments;
     market_id = market_id_no_six;
@@ -26,7 +26,7 @@ function [gmm_obj] = blp_gmm(sigma,initial,shares,sims,x,price,instruments,tol,m
     
     distance_tracker = ones(10000,1);
     
-    market_id_expand = market_id .* ones(rows(delta_curr),columns(idiosyncratic_utility));
+    subs_no_size = 
 
    while distance > tol;
        
@@ -34,23 +34,15 @@ function [gmm_obj] = blp_gmm(sigma,initial,shares,sims,x,price,instruments,tol,m
      idiosyncratic_utility = attributes * (sigma_exp' .* sims');
      share_numerator_hat = exp(delta_curr .* ones(rows(delta_curr),columns(idiosyncratic_utility)) ...
          +  idiosyncratic_utility);
-     market_sum_share_numerator_hat = zeros(rows(market_id), columns(share_numerator_hat));
- 
-     for i = 1: 10000;
-        add_market_sum_share_numerator_hat = accumarray(market_id,share_numerator_hat(:,i));
-        expand_add_market_sum_share_numerator_hat = add_market_sum_share_numerator_hat(market_id(:,1));
-        market_sum_share_numerator_hat(:,i) = expand_add_market_sum_share_numerator_hat;
-     end;
-     
-     share_hat = share_numerator_hat ./ (1 +  market_sum_share_numerator_hat);
+     share_sum_numerator_hat = accumarray(market_id,share_numerator_hat,,[rows(market_id) 1]);
+     share_hat = share_numerator_hat ./ (1 +  share_numerator_hat);
      mean_share_hat = mean(share_hat,2);
      delta_next = delta_curr + log(shares) - log(mean_share_hat);
-     distance = max(abs(delta_next - delta_curr));
+     distance = sum(abs(delta_next - delta_curr));
       
      delta_curr = delta_next;
      iter = iter + 1;
      distance_tracker(iter) = distance;
-     distance
    end;
    
    %%

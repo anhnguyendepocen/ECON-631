@@ -54,6 +54,8 @@ predict price_hat_rival_firm, xb
 
 reg blp_lhs price_hat_rival_firm sugar mushy
 
+ivreg blp_lhs sugar mushy (price = instrument_sugar_rival instrument_mushy_rival sugar mushy), r
+
 
 
 

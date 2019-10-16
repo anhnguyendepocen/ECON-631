@@ -52,7 +52,8 @@ instruments = instruments_with_six(not_firm_six,:);
 %%
 %Create LHS for BLP
 
-subs = findgroups(city,year,quarter);
+market_id = findgroups(city,year,quarter);
+market_id_no_six = market_id(not_firm_six,:);
 
 sum_market_share = accumarray(subs,market_share);
 subs_sum_market_share = horzcat(sum_market_share,unique(subs));
@@ -67,7 +68,6 @@ BLP_lhs_nosix = BLP_lhs(not_firm_six,:);
 %%%%%%%%%%%%%%%%%%%%%%%%
 
 norm_rnd = normrnd(0,1,[10000,2]);
-
 
 %%
 %%%%%%%%%%%%%%%%%%%%%%%%
@@ -86,13 +86,14 @@ mean_utility = BLP_rhs_nosix * beta_ols;
 %%
 %Run minimzer;
 
-theta0 = [0 0];
+theta0 = [.4 .5];
 x = horzcat(sugar_nosix,mushy_nosix);
 market_share_nosix = market_share(not_firm_six,:);
-tol = 10 ^ -11;
+%tol = 10 ^ -11;
+tol = 10 ^ -8;
 sims = norm_rnd;
 options = optimset('Display','iter');
-[estimateblp] = fminsearch(@(theta)blp_gmm([theta],mean_utility,market_share_nosix,sims,x,price_nosix,instruments,tol),theta0,options);
+[estimateblp] = fminsearch(@(theta)blp_gmm([theta],mean_utility,market_share_nosix,sims,x,price_nosix,instruments,tol,market_id_no_six),theta0,options);
 
 
 %%
@@ -100,12 +101,9 @@ options = optimset('Display','iter');
 
     delta_curr = mean_utility;
     distance = 1;
-    iter = 0;
-    sigma = estimateblp;
+    sigma = exp(estimateblp);
     shares = market_share_nosix;
     
-    distance_tracker = ones(10000,1);
-
    while distance > tol;
        
      attributes = x;
@@ -118,17 +116,137 @@ options = optimset('Display','iter');
      distance = sum(abs(delta_next - delta_curr));
       
      delta_curr = delta_next;
-     iter = iter + 1;
-     distance_tracker(iter) = distance;
+      distance
    end;
 
-   for_z = horzcat(x,instruments); 
+   for_z = horzcat(x,instruments,ones(rows(instruments),1)); 
    P_Z_samefirm = for_z * inv(for_z' * for_z) ...
                     * for_z';
     X_nosix = horzcat(price_nosix,x,ones(rows(x),1));
 
     beta_blp = inv(X_nosix' *  P_Z_samefirm * X_nosix) ...
                             * (X_nosix' *  P_Z_samefirm * delta_curr);  
+     %calc. next for se
+    iv_resid_blp = delta_curr -  P_Z_samefirm * X_nosix * beta_blp;
 
    
+%%
+%%%%%%%%%%%%%%%%%%%%%%%%
+%  Compute Standard Errors
+%%%%%%%%%%%%%%%%%%%%%%%%
 
+%attributes, including price
+X_gmm = horzcat(price_nosix,sugar_nosix,mushy_nosix);
+G0_beta = -X_gmm' * instruments / rows(instruments);
+
+%sigmas: First
+phi = 10^-6;
+sigma_lt_one = exp(estimateblp) - phi .* [1,0];
+
+    delta_curr_lt_one = mean_utility;
+    distance = 1;
+    shares = market_share_nosix;
+    
+   while distance > tol;
+       
+     attributes = x;
+     idiosyncratic_utility = attributes * (sigma_lt_one' .* sims');
+     share_numerator_hat = exp(delta_curr_lt_one .* ones(rows(delta_curr_lt_one),columns(idiosyncratic_utility)) ...
+         +  idiosyncratic_utility);
+     share_hat = share_numerator_hat ./ (1 +  share_numerator_hat);
+     mean_share_hat = mean(share_hat,2);
+     delta_next = delta_curr_lt_one + log(shares) - log(mean_share_hat);
+     distance = sum(abs(delta_next - delta_curr_lt_one));
+      
+     delta_curr_lt_one = delta_next;
+
+   end;
+
+iv_resid_lt_one = delta_curr_lt_one -  P_Z_samefirm * X_nosix * beta_blp;
+G0_lt_one = iv_resid_lt_one' * instruments;
+
+sigma_gt_one = exp(estimateblp) + phi .* [1,0];
+
+    delta_curr_gt_one = mean_utility;
+    distance = 1;
+    shares = market_share_nosix;
+    
+   while distance > tol;
+       
+     attributes = x;
+     idiosyncratic_utility = attributes * (sigma_gt_one' .* sims');
+     share_numerator_hat = exp(delta_curr_gt_one .* ones(rows(delta_curr_gt_one),columns(idiosyncratic_utility)) ...
+         +  idiosyncratic_utility);
+     share_hat = share_numerator_hat ./ (1 +  share_numerator_hat);
+     mean_share_hat = mean(share_hat,2);
+     delta_next = delta_curr_gt_one + log(shares) - log(mean_share_hat);
+     distance = sum(abs(delta_next - delta_curr_gt_one));
+      
+     delta_curr_gt_one = delta_next;
+     distance
+
+   end;
+
+iv_resid_gt_one = delta_curr_gt_one -  P_Z_samefirm * X_nosix * beta_blp;
+G0_gt_one = iv_resid_gt_one' * instruments;
+
+G0_one = G0_gt_one - G0_lt_one;
+
+%sigmas: Second 
+phi = 10^-6;
+sigma_lt_two = exp(estimateblp) - phi .* [0,1];
+
+    delta_curr_lt_two = mean_utility;
+    distance = 1;
+    shares = market_share_nosix;
+    
+   while distance > tol;
+       
+     attributes = x;
+     idiosyncratic_utility = attributes * (sigma_lt_two' .* sims');
+     share_numerator_hat = exp(delta_curr_lt_two .* ones(rows(delta_curr_lt_two),columns(idiosyncratic_utility)) ...
+         +  idiosyncratic_utility);
+     share_hat = share_numerator_hat ./ (1 +  share_numerator_hat);
+     mean_share_hat = mean(share_hat,2);
+     delta_next = delta_curr_lt_two + log(shares) - log(mean_share_hat);
+     distance = sum(abs(delta_next - delta_curr_lt_two));
+      
+     delta_curr_lt_two = delta_next;
+
+   end;
+
+iv_resid_lt_two = delta_curr_lt_two -  P_Z_samefirm * X_nosix * beta_blp;
+G0_lt_two = iv_resid_lt_two' * instruments;
+
+sigma_gt_two = exp(estimateblp) + phi .* [0,1];
+
+    delta_curr_gt_two = mean_utility;
+    distance = 1;
+    shares = market_share_nosix;
+    
+   while distance > tol;
+       
+     attributes = x;
+     idiosyncratic_utility = attributes * (sigma_gt_two' .* sims');
+     share_numerator_hat = exp(delta_curr_gt_two .* ones(rows(delta_curr_gt_two),columns(idiosyncratic_utility)) ...
+         +  idiosyncratic_utility);
+     share_hat = share_numerator_hat ./ (1 +  share_numerator_hat);
+     mean_share_hat = mean(share_hat,2);
+     delta_next = delta_curr_gt_two + log(shares) - log(mean_share_hat);
+     distance = sum(abs(delta_next - delta_curr_gt_two));
+      
+     delta_curr_gt_two = delta_next;
+
+   end;
+
+iv_resid_gt_two = delta_curr_gt_two -  P_Z_samefirm * X_nosix * beta_blp;
+G0_gt_two = iv_resid_gt_two' * instruments;
+
+G0_two = G0_gt_two - G0_lt_two;
+
+G0_stack = horzcat(G0_beta',G0_one',G0_two');
+
+Middle_Var = iv_resid_blp' * instruments * instruments' * iv_resid_blp
+
+GMM_Total_Var = inv(G0_stack' * G0_stack) * G0_stack' * Middle_Var * G0_stack * inv(G0_stack' * G0_stack)
+se_gmm = diag(sqrt(GMM_Total_Var / rows(iv_resid_blp) ) );

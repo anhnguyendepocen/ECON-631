@@ -38,13 +38,27 @@ avg_sugar_same_firm = (total_sugar_firm_city_date_expand - sugar) ...
                     ./ denom;
 avg_mushy_same_firm = (total_mushy_firm_city_date_expand - mushy) ...
                     ./ denom;
-                 
+ 
+instruments_with_six = horzcat(avg_sugar_same_firm,avg_mushy_same_firm);                
+               
 %remove firm six as no other products
 not_firm_six = firm_id ~= 6; 
 
 avg_sugar_same_firm_nosix = avg_sugar_same_firm(not_firm_six,:);
 avg_mushy_same_firm_nosix = avg_mushy_same_firm(not_firm_six,:);
 price_nosix = price(not_firm_six,:);
+instruments = instruments_with_six(not_firm_six,:);
+
+%%
+%Create LHS for BLP
+
+subs = findgroups(city,year,quarter);
+
+sum_market_share = accumarray(subs,market_share);
+subs_sum_market_share = horzcat(sum_market_share,unique(subs));
+expand_sum_market_share = subs_sum_market_share(subs(:,1));
+
+BLP_lhs = log(market_share) - log(1 - expand_sum_market_share);
 BLP_lhs_nosix = BLP_lhs(not_firm_six,:);
 
 %%
@@ -60,30 +74,25 @@ norm_rnd = normrnd(0,1,[10000,2]);
 %  Estimate Model
 %%%%%%%%%%%%%%%%%%%%%%%%
 
-subs = findgroups(city,year,quarter);
-
-sum_market_share = accumarray(subs,market_share);
-subs_sum_market_share = horzcat(sum_market_share,unique(subs));
-expand_sum_market_share = subs_sum_market_share(subs(:,1));
-
-BLP_lhs = log(market_share) - log(1 - expand_sum_market_share);
-
-BLP_rhs = horzcat(price,sugar,mushy,ones(rows(price),1));
-
 %First guess: logit mean utility
+sugar_nosix = sugar(not_firm_six,:);
+mushy_nosix = mushy(not_firm_six,:);
+BLP_rhs_nosix = horzcat(price_nosix, sugar_nosix, mushy_nosix, ...
+                        ones(rows(mushy_nosix),1));
 
-beta_ols = inv(BLP_rhs' * BLP_rhs) * (BLP_rhs' * BLP_lhs);
-mean_utility = BLP_rhs * beta_ols;
+beta_ols = inv(BLP_rhs_nosix' * BLP_rhs_nosix) * (BLP_rhs_nosix' * BLP_lhs_nosix);
+mean_utility = BLP_rhs_nosix * beta_ols;
 
 %%
 %Run minimzer;
 
 theta0 = [0 0];
-x = horzcat(sugar,mushy);
+x = horzcat(sugar_nosix,mushy_nosix);
+market_share_nosix = market_share(not_firm_six,:);
 tol = 10 ^ -11;
 sims = norm_rnd;
 options = optimset('Display','iter');
-[estimateblp] = fminsearch(@(theta)blp_gmm([theta],mean_utility,market_share,sims,x,price,instruments,tol),theta0,options);
+[estimateblp] = fminsearch(@(theta)blp_gmm([theta],mean_utility,market_share_nosix,sims,x,price_nosix,instruments,tol),theta0,options);
 
 
 %%
@@ -91,12 +100,9 @@ options = optimset('Display','iter');
 
     delta_curr = mean_utility;
     distance = 1;
-    iter = 0;
     sigma = estimateblp;
-    shares = market_share;
+    shares = market_share_nosix;
     
-    distance_tracker = ones(10000,1);
-
    while distance > tol;
        
      attributes = x;
@@ -109,15 +115,132 @@ options = optimset('Display','iter');
      distance = sum(abs(delta_next - delta_curr));
       
      delta_curr = delta_next;
-     iter = iter + 1;
-     distance_tracker(iter) = distance;
+
    end;
 
-   first_stage_lhs = horzcat(instruments,ones(rows(instruments),1));
-   beta_price_hat = inv(first_stage_lhs' * first_stage_lhs) * (first_stage_lhs' * price);
-   price_hat = first_stage_lhs * beta_price_hat;
+   for_z = horzcat(x,instruments,ones(rows(instruments),1)); 
+   P_Z_samefirm = for_z * inv(for_z' * for_z) ...
+                    * for_z';
+    X_nosix = horzcat(price_nosix,x,ones(rows(x),1));
+
+    beta_blp = inv(X_nosix' *  P_Z_samefirm * X_nosix) ...
+                            * (X_nosix' *  P_Z_samefirm * delta_curr);  
+
    
-   BLP_LHS = horzcat(x,price_hat,ones(rows(x),1));
-   beta_blp = inv(BLP_LHS' * BLP_LHS) * (BLP_LHS' * delta_curr);
+%%
+%%%%%%%%%%%%%%%%%%%%%%%%
+%  Compute Standard Errors
+%%%%%%%%%%%%%%%%%%%%%%%%
 
+%attributes, including price
+X_gmm = horzcat(price_nosix,sugar_nosix,mushy_nosix);
+G0_beta = -X_gmm' * instruments / rows(instruments);
 
+%sigmas: First
+phi = 10^-6;
+sigma_lt_one = estimateblp - phi .* [1,0];
+
+    delta_curr_lt_one = mean_utility;
+    distance = 1;
+    shares = market_share_nosix;
+    
+   while distance > tol;
+       
+     attributes = x;
+     idiosyncratic_utility = attributes * (sigma_lt_one' .* sims');
+     share_numerator_hat = exp(delta_curr_lt_one .* ones(rows(delta_curr_lt_one),columns(idiosyncratic_utility)) ...
+         +  idiosyncratic_utility);
+     share_hat = share_numerator_hat ./ (1 +  share_numerator_hat);
+     mean_share_hat = mean(share_hat,2);
+     delta_next = delta_curr_lt_one + log(shares) - log(mean_share_hat);
+     distance = sum(abs(delta_next - delta_curr_lt_one));
+      
+     delta_curr_lt_one = delta_next;
+
+   end;
+
+iv_resid_lt_one = delta_curr_lt_one -  P_Z_samefirm * X_nosix * beta_blp;
+G0_lt_one = iv_resid_lt_one' * instruments;
+
+sigma_gt_one = estimateblp + phi .* [1,0];
+
+    delta_curr_gt_one = mean_utility;
+    distance = 1;
+    shares = market_share_nosix;
+    
+   while distance > tol;
+       
+     attributes = x;
+     idiosyncratic_utility = attributes * (sigma_gt_one' .* sims');
+     share_numerator_hat = exp(delta_curr_gt_one .* ones(rows(delta_curr_gt_one),columns(idiosyncratic_utility)) ...
+         +  idiosyncratic_utility);
+     share_hat = share_numerator_hat ./ (1 +  share_numerator_hat);
+     mean_share_hat = mean(share_hat,2);
+     delta_next = delta_curr_gt_one + log(shares) - log(mean_share_hat);
+     distance = sum(abs(delta_next - delta_curr_gt_one));
+      
+     delta_curr_lt_one = delta_next;
+
+   end;
+
+iv_resid_gt_one = delta_curr_gt_one -  P_Z_samefirm * X_nosix * beta_blp;
+G0_gt_one = iv_resid_gt_one' * instruments;
+
+G0_one = G0_gt_one - G0_lt_one;
+
+%sigmas: Second 
+phi = 10^-6;
+sigma_lt_two = estimateblp - phi .* [0,1];
+
+    delta_curr_lt_two = mean_utility;
+    distance = 1;
+    shares = market_share_nosix;
+    
+   while distance > tol;
+       
+     attributes = x;
+     idiosyncratic_utility = attributes * (sigma_lt_two' .* sims');
+     share_numerator_hat = exp(delta_curr_lt_two .* ones(rows(delta_curr_lt_two),columns(idiosyncratic_utility)) ...
+         +  idiosyncratic_utility);
+     share_hat = share_numerator_hat ./ (1 +  share_numerator_hat);
+     mean_share_hat = mean(share_hat,2);
+     delta_next = delta_curr_lt_two + log(shares) - log(mean_share_hat);
+     distance = sum(abs(delta_next - delta_curr_lt_one));
+      
+     delta_curr_lt_two = delta_next;
+
+   end;
+
+iv_resid_lt_two = delta_curr_lt_two -  P_Z_samefirm * X_nosix * beta_blp;
+G0_lt_two = iv_resid_lt_two' * instruments;
+
+sigma_gt_two = estimateblp + phi .* [0,1];
+
+    delta_curr_gt_two = mean_utility;
+    distance = 1;
+    shares = market_share_nosix;
+    
+   while distance > tol;
+       
+     attributes = x;
+     idiosyncratic_utility = attributes * (sigma_gt_two' .* sims');
+     share_numerator_hat = exp(delta_curr_gt_two .* ones(rows(delta_curr_gt_two),columns(idiosyncratic_utility)) ...
+         +  idiosyncratic_utility);
+     share_hat = share_numerator_hat ./ (1 +  share_numerator_hat);
+     mean_share_hat = mean(share_hat,2);
+     delta_next = delta_curr_gt_two + log(shares) - log(mean_share_hat);
+     distance = sum(abs(delta_next - delta_curr_gt_two));
+      
+     delta_curr_gt_two = delta_next;
+
+   end;
+
+iv_resid_gt_two = delta_curr_gt_two -  P_Z_samefirm * X_nosix * beta_blp;
+G0_gt_two = iv_resid_gt_two' * instruments;
+
+G0_two = G0_gt_two - G0_lt_two;
+
+G0_stack = horzcat(G0_beta,G0_one,G0_two);
+
+iv_resid_blp 
+Middle_Var = 

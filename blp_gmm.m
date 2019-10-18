@@ -7,7 +7,7 @@ function [gmm_obj] = blp_gmm(sigma,initial,shares,sims,x,price,instruments,tol,m
 %%
 %{
     sigma = [.4 .5];
-    tol = 10 ^ -9;
+    tol = 10 ^ -8;
     shares = market_share_nosix;
     sims = norm_rnd;
     x = horzcat(sugar_nosix,mushy_nosix);
@@ -19,6 +19,7 @@ function [gmm_obj] = blp_gmm(sigma,initial,shares,sims,x,price,instruments,tol,m
     %%
     %Berry Inverstion:  
     sigma_exp = exp(sigma);
+    log(sigma_exp)
     
     delta_curr = initial;
     distance = 1;
@@ -26,7 +27,7 @@ function [gmm_obj] = blp_gmm(sigma,initial,shares,sims,x,price,instruments,tol,m
     
     distance_tracker = ones(10000,1);
     
-    market_id_expand = market_id .* ones(rows(delta_curr),columns(idiosyncratic_utility));
+    market_id_expand = market_id .* ones(rows(delta_curr),columns(delta_curr));
 
    while distance > tol;
        
@@ -50,7 +51,7 @@ function [gmm_obj] = blp_gmm(sigma,initial,shares,sims,x,price,instruments,tol,m
      delta_curr = delta_next;
      iter = iter + 1;
      distance_tracker(iter) = distance;
-     distance
+     %distance
    end;
    
    %%
@@ -67,10 +68,11 @@ function [gmm_obj] = blp_gmm(sigma,initial,shares,sims,x,price,instruments,tol,m
    %%
    %compute obj fct val
    iv_resid =  delta_curr -  P_Z_samefirm * X_nosix * beta_2SLS_samefirm;
-   pre_gmm_resid = iv_resid' * instruments;
-   gmm_resid = pre_gmm_resid * pre_gmm_resid';
-   gmm_obj = gmm_resid;
+   pre_gmm_resid = iv_resid' * for_z;
+   gmm_obj = pre_gmm_resid * pre_gmm_resid';
    
+   beta_2SLS_samefirm
+   gmm_obj
    %blp_counter = blp_counter + .5
    
 end

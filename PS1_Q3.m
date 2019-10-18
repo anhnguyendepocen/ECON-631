@@ -55,6 +55,8 @@ instruments = instruments_with_six(not_firm_six,:);
 market_id = findgroups(city,year,quarter);
 market_id_no_six = market_id(not_firm_six,:);
 
+subs = findgroups(city,year,quarter);
+
 sum_market_share = accumarray(subs,market_share);
 subs_sum_market_share = horzcat(sum_market_share,unique(subs));
 expand_sum_market_share = subs_sum_market_share(subs(:,1));
@@ -107,16 +109,25 @@ options = optimset('Display','iter');
    while distance > tol;
        
      attributes = x;
-     idiosyncratic_utility = attributes * (sigma' .* sims');
+    idiosyncratic_utility = attributes * (sigma_exp' .* sims');
      share_numerator_hat = exp(delta_curr .* ones(rows(delta_curr),columns(idiosyncratic_utility)) ...
          +  idiosyncratic_utility);
-     share_hat = share_numerator_hat ./ (1 +  share_numerator_hat);
+     market_sum_share_numerator_hat = zeros(rows(market_id), columns(share_numerator_hat));
+ 
+     for i = 1: 10000;
+        add_market_sum_share_numerator_hat = accumarray(market_id,share_numerator_hat(:,i));
+        expand_add_market_sum_share_numerator_hat = add_market_sum_share_numerator_hat(market_id(:,1));
+        market_sum_share_numerator_hat(:,i) = expand_add_market_sum_share_numerator_hat;
+     end;
+     
+     share_hat = share_numerator_hat ./ (1 +  market_sum_share_numerator_hat);
      mean_share_hat = mean(share_hat,2);
      delta_next = delta_curr + log(shares) - log(mean_share_hat);
-     distance = sum(abs(delta_next - delta_curr));
+     distance = max(abs(delta_next - delta_curr));
       
      delta_curr = delta_next;
-      distance
+     iter = iter + 1;
+     distance_tracker(iter) = distance;
    end;
 
    for_z = horzcat(x,instruments,ones(rows(instruments),1)); 
@@ -135,11 +146,14 @@ options = optimset('Display','iter');
 %  Compute Standard Errors
 %%%%%%%%%%%%%%%%%%%%%%%%
 
+estimateblp = [ 2.0582   -1.9037]
+
 %attributes, including price
 X_gmm = horzcat(price_nosix,sugar_nosix,mushy_nosix);
-G0_beta = -X_gmm' * instruments / rows(instruments);
+G0_beta = -X_gmm' * for_z / rows(for_z);
 
 %sigmas: First
+tol = 10^-6;
 phi = 10^-6;
 sigma_lt_one = exp(estimateblp) - phi .* [1,0];
 
@@ -153,7 +167,16 @@ sigma_lt_one = exp(estimateblp) - phi .* [1,0];
      idiosyncratic_utility = attributes * (sigma_lt_one' .* sims');
      share_numerator_hat = exp(delta_curr_lt_one .* ones(rows(delta_curr_lt_one),columns(idiosyncratic_utility)) ...
          +  idiosyncratic_utility);
-     share_hat = share_numerator_hat ./ (1 +  share_numerator_hat);
+     market_sum_share_numerator_hat = zeros(rows(market_id), columns(share_numerator_hat));
+ 
+     for i = 1: 10000;
+        add_market_sum_share_numerator_hat = accumarray(market_id,share_numerator_hat(:,i));
+        expand_add_market_sum_share_numerator_hat = add_market_sum_share_numerator_hat(market_id(:,1));
+        market_sum_share_numerator_hat(:,i) = expand_add_market_sum_share_numerator_hat;
+     end;
+     
+     share_hat = share_numerator_hat ./ (1 +  market_sum_share_numerator_hat);
+
      mean_share_hat = mean(share_hat,2);
      delta_next = delta_curr_lt_one + log(shares) - log(mean_share_hat);
      distance = sum(abs(delta_next - delta_curr_lt_one));
@@ -163,7 +186,7 @@ sigma_lt_one = exp(estimateblp) - phi .* [1,0];
    end;
 
 iv_resid_lt_one = delta_curr_lt_one -  P_Z_samefirm * X_nosix * beta_blp;
-G0_lt_one = iv_resid_lt_one' * instruments;
+G0_lt_one = iv_resid_lt_one' * for_z;
 
 sigma_gt_one = exp(estimateblp) + phi .* [1,0];
 
@@ -177,18 +200,26 @@ sigma_gt_one = exp(estimateblp) + phi .* [1,0];
      idiosyncratic_utility = attributes * (sigma_gt_one' .* sims');
      share_numerator_hat = exp(delta_curr_gt_one .* ones(rows(delta_curr_gt_one),columns(idiosyncratic_utility)) ...
          +  idiosyncratic_utility);
-     share_hat = share_numerator_hat ./ (1 +  share_numerator_hat);
+    market_sum_share_numerator_hat = zeros(rows(market_id), columns(share_numerator_hat));
+ 
+     for i = 1: 10000;
+        add_market_sum_share_numerator_hat = accumarray(market_id,share_numerator_hat(:,i));
+        expand_add_market_sum_share_numerator_hat = add_market_sum_share_numerator_hat(market_id(:,1));
+        market_sum_share_numerator_hat(:,i) = expand_add_market_sum_share_numerator_hat;
+     end;
+     
+     share_hat = share_numerator_hat ./ (1 +  market_sum_share_numerator_hat);
      mean_share_hat = mean(share_hat,2);
      delta_next = delta_curr_gt_one + log(shares) - log(mean_share_hat);
      distance = sum(abs(delta_next - delta_curr_gt_one));
       
      delta_curr_gt_one = delta_next;
-     distance
+     %distance
 
    end;
 
 iv_resid_gt_one = delta_curr_gt_one -  P_Z_samefirm * X_nosix * beta_blp;
-G0_gt_one = iv_resid_gt_one' * instruments;
+G0_gt_one = iv_resid_gt_one' * for_z;
 
 G0_one = G0_gt_one - G0_lt_one;
 
@@ -216,7 +247,7 @@ sigma_lt_two = exp(estimateblp) - phi .* [0,1];
    end;
 
 iv_resid_lt_two = delta_curr_lt_two -  P_Z_samefirm * X_nosix * beta_blp;
-G0_lt_two = iv_resid_lt_two' * instruments;
+G0_lt_two = iv_resid_lt_two' * for_z;
 
 sigma_gt_two = exp(estimateblp) + phi .* [0,1];
 
@@ -240,13 +271,13 @@ sigma_gt_two = exp(estimateblp) + phi .* [0,1];
    end;
 
 iv_resid_gt_two = delta_curr_gt_two -  P_Z_samefirm * X_nosix * beta_blp;
-G0_gt_two = iv_resid_gt_two' * instruments;
+G0_gt_two = iv_resid_gt_two' * for_z;
 
 G0_two = G0_gt_two - G0_lt_two;
 
 G0_stack = horzcat(G0_beta',G0_one',G0_two');
 
-Middle_Var = iv_resid_blp' * instruments * instruments' * iv_resid_blp
+Middle_Var = iv_resid_blp' * for_z * for_z' * iv_resid_blp
 
 GMM_Total_Var = inv(G0_stack' * G0_stack) * G0_stack' * Middle_Var * G0_stack * inv(G0_stack' * G0_stack)
 se_gmm = diag(sqrt(GMM_Total_Var / rows(iv_resid_blp) ) );

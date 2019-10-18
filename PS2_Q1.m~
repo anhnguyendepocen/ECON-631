@@ -1,0 +1,46 @@
+%%
+%Created by RM on 2019.10.18 for ECON 631 PS 2
+%Compute pricing equilibria
+
+%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%
+%   Question 0: Simulate Normal Dist. for Rand. Coefs
+%%%%%%%%%%%%%%%%%%%%%%%%
+
+norm_rnd = normrnd(0,1,[10000,1]);
+
+%%
+%%%%%%%%%%%%%%%%%%%%%%%%
+%   Question 1: Initialize Parameters
+%%%%%%%%%%%%%%%%%%%%%%%%
+
+alpha = 1;
+beta = 1;
+sigma = 1;
+x = [1 2 3];
+mc = [x(1,1) x(1,2) x(1,3)];
+
+%%
+%%%%%%%%%%%%%%%%%%%%%%%%
+%   Question 1: Compute prices
+%%%%%%%%%%%%%%%%%%%%%%%%
+
+prices_curr = [1 1 1];
+tol = 10 ^ -2;
+
+distance = 1;
+
+%while distance > tol;
+ 
+s_curr_num_sim = exp( (beta * x - alpha * prices_curr)' .* ones(1,rows(norm_rnd))...
+                + sigma * horzcat(norm_rnd,norm_rnd,norm_rnd)' );
+pre_s_curr_denom_sim = (1 + sum(s_curr_num_sim));
+s_curr_denom_sim = horzcat(pre_s_curr_denom_sim',pre_s_curr_denom_sim',pre_s_curr_denom_sim')';
+s_curr_sim = s_curr_num_sim ./ s_curr_denom_sim;
+s_curr = mean(s_curr_sim,2);
+
+delta_s_delta_p_num_sim = s_curr_num_sim .* horzcat(sum(s_curr_num_sim);;
+
+
+

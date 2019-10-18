@@ -1,4 +1,4 @@
-function [prices_comp] = priceitercomp(alpha,beta,sigma,x,mc,prices_curr,norm_rnd,tol,weight_next);
+function [prices_merge] = priceitermerge(alpha,beta,sigma,x,mc,prices_curr,norm_rnd,tol,weight_next,ownership);
 
 distance = 1;
 iter = 0;
@@ -18,6 +18,21 @@ while distance > tol;
                             (s_curr_num_sim .* s_curr_num_sim) ./ ( s_curr_denom_sim .* s_curr_denom_sim) );
     delta_s_delta_p = mean(delta_s_delta_p_sim,2);
     delta_s_delta_p_inv = delta_s_delta_p .^ (-1);
+    
+    %compute derivatives to hit with ownership matrix
+    delta_s_delta_p_mat = zeros(columns(x),columns(x));
+    for i = 1:3;
+        for j = 1:3;
+            if i == j;
+                delta_s_delta_p_mat(i,j) = delta_s_delta_p(i);
+            else
+                num_delta_s_delta_p_mat_sim = s_curr_num_sim(i,:) .*
+            end;
+        end;
+    end;    
+           
+               
+    
 
     prices_next = (mc' - delta_s_delta_p_inv .* s_curr)' ;
     distance = max(abs(prices_curr - prices_next));

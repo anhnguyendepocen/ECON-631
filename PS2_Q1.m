@@ -36,9 +36,9 @@ prices_curr = [1 1 1];
 %%%%%%%%%%%%%%%%%%%%%%%%
 
 prices_curr = [1 1 1];
-tol = 10 ^ -6;
-weight_next = .005;
-pricesq1 = priceitercomp_old(alpha1,beta1,sigma1,x,mc,prices_curr,norm_rnd,tol,weight_next);
+tol = 10 ^ -8;
+weight_next = .05;
+pricesq1 = priceitercomp(alpha1,beta1,sigma1,x,mc,prices_curr,norm_rnd,tol,weight_next);
 
 %%
 %%%%%%%%%%%%%%%%%%%%%%%%
@@ -57,14 +57,43 @@ mc = [x(1,1) x(1,2) x(1,3)];
 %%%%%%%%%%%%%%%%%%%%%%%%
 
 prices_curr = pricesq1;
-tol = 10 ^ -6;
-weight_next = .000001;
+tol = 10 ^ -8;
+weight_next = .05;
 
-pricesq2 = priceitercomp_old(alpha2,beta2,sigma2,x,mc,prices_curr,norm_rnd,tol,weight_next);
+pricesq2 = priceitercomp(alpha2,beta2,sigma2,x,mc,prices_curr,norm_rnd,tol,weight_next);
 
 %%
 %%%%%%%%%%%%%%%%%%%%%%%%
-%   Question 3: Merger
+%   Question 3: Merger Price Effects
 %%%%%%%%%%%%%%%%%%%%%%%%
 
-ownership = [1 1 0; 1 1 0; 0 0 1];
+ownership = [0 1 0; 1 0 0; 0 0 0];
+
+prices_curr = pricesq2;
+tol = 10 ^ -8;
+weight_next = .05;
+
+pricesq3 = priceitermerge(alpha2,beta2,sigma2,x,mc,prices_curr,norm_rnd,tol,weight_next,ownership);
+
+%%
+%%%%%%%%%%%%%%%%%%%%%%%%
+%   Question 4: Merger Effects on Welfare
+%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+
+%%
+%%%%%%%%%%%%%%%%%%%%%%%%
+%   Question 5: Merger Prices with Cost Reductions
+%%%%%%%%%%%%%%%%%%%%%%%%
+
+ownership = [0 1 0; 1 0 0; 0 0 0];
+
+prices_curr = pricesq3;
+tol = 10 ^ -8;
+weight_next = .05;
+
+mc_synergy = [.5 1 3];
+
+pricesq5 = priceitermerge(alpha2,beta2,sigma2,x,mc_synergy,prices_curr,norm_rnd,tol,weight_next,ownership);

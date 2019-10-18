@@ -1,4 +1,4 @@
-function [prices_comp] = priceitercomp(alpha,beta,sigma,x,mc,prices_curr,norm_rnd,tol,weight_next);
+function [prices_merge] = priceitermerge(alpha,beta,sigma,x,mc,prices_curr,norm_rnd,tol,weight_next,ownership);
 
 distance = 1;
 iter = 0;
@@ -18,10 +18,26 @@ while distance > tol;
                             (s_curr_num_sim .* s_curr_num_sim) ./ ( s_curr_denom_sim .* s_curr_denom_sim) );
     delta_s_delta_p = mean(delta_s_delta_p_sim,2);
     delta_s_delta_p_inv = delta_s_delta_p .^ (-1);
-
-    prices_next = (mc' - delta_s_delta_p_inv .* s_curr)' ;
-    distance = max(abs(prices_curr - prices_next));
     
+    %compute derivatives to hit with ownership matrix
+    delta_s_delta_p_mat = zeros(columns(x),columns(x));
+    for i = 1:3;
+        for j = 1:3;
+            if i == j;
+                delta_s_delta_p_mat(i,j) = delta_s_delta_p(i);
+            else
+                num_delta_s_delta_p_mat_sim = s_curr_num_sim(i,:) .*  s_curr_num_sim(j,:);
+                denom_delta_s_delta_p_mat_sim = pre_s_curr_denom_sim .* pre_s_curr_denom_sim;
+                delta_s_delta_p_mat(i,j) = mean( num_delta_s_delta_p_mat_sim ./ denom_delta_s_delta_p_mat_sim, 2);
+            end;
+        end;
+    end;    
+           
+               
+    %compute next prices
+    merger_price_add = (ownership * (prices_curr - mc)') .* max(ownership .* delta_s_delta_p_mat)' ;  
+    prices_next = (mc' - delta_s_delta_p_inv .* (s_curr + merger_price_add) )' ;
+    distance = max(abs(prices_curr - prices_next));
     
     %prices_next = prices_curr;
     % have one firm update price
@@ -37,6 +53,6 @@ while distance > tol;
     
 end;
 
-prices_comp = prices_curr;
+prices_merge = prices_curr;
 
 end

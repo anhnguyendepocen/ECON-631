@@ -14,8 +14,11 @@ while distance > tol;
     s_curr_sim = s_curr_num_sim ./ s_curr_denom_sim;
     s_curr = mean(s_curr_sim,2);
 
-    delta_s_delta_p_num_sim = s_curr_num_sim .* horzcat(sum_s_curr_num_sim',sum_s_curr_num_sim',sum_s_curr_num_sim')';
-    delta_s_delta_p_sim = -alpha * delta_s_delta_p_num_sim ./ (s_curr_denom_sim .* s_curr_denom_sim);
+    %delta_s_delta_p_num_sim = s_curr_num_sim .* horzcat(sum_s_curr_num_sim',sum_s_curr_num_sim',sum_s_curr_num_sim')';
+    %delta_s_delta_p_sim = -alpha * delta_s_delta_p_num_sim ./ (s_curr_denom_sim .* s_curr_denom_sim);
+    
+    delta_s_delta_p_sim = alpha * (-s_curr_sim + ...
+                            (s_curr_num_sim .* s_curr_num_sim) ./ ( s_curr_denom_sim .* s_curr_denom_sim) );
     delta_s_delta_p = mean(delta_s_delta_p_sim,2);
     delta_s_delta_p_inv = delta_s_delta_p .^ (-1);
 

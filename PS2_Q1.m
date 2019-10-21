@@ -104,16 +104,16 @@ pricesq3 = priceitermerge(alpha2,beta2,sigma2,x,mc,prices_curr,norm_rnd,tol,weig
 
 %%
 %Calc CS: find logit inclusive values for each case
-    random_coeffs = sigma * x' .* ones(rows(x'),rows(norm_rnd)) .* norm_rnd';
+    random_coeffs = sigma2 * x' .* ones(rows(x'),rows(norm_rnd)) .* norm_rnd';
    
    %premerger
-    pre_logit_incl_premerger_sim = exp( (beta * x - alpha2 * pricesq2)' .* ones(1,rows(norm_rnd))...
+    pre_logit_incl_premerger_sim = exp( (beta2 * x - alpha2 * pricesq2)' .* ones(1,rows(norm_rnd))...
                     + random_coeffs );
     mean_logit_incl_premerger_sim = mean(pre_logit_incl_premerger_sim,2);
     logit_incl_premerger = log(1 + sum(mean_logit_incl_premerger_sim));
     
     %postmerger
-    pre_logit_incl_postmerger_sim = exp( (beta * x - alpha2 * pricesq3)' .* ones(1,rows(norm_rnd))...
+    pre_logit_incl_postmerger_sim = exp( (beta2 * x - alpha2 * pricesq3)' .* ones(1,rows(norm_rnd))...
                     + random_coeffs );
     mean_logit_incl_postmerger_sim = mean(pre_logit_incl_postmerger_sim,2);
     logit_incl_postmerger = log(1 + sum(mean_logit_incl_postmerger_sim));
@@ -123,7 +123,7 @@ pricesq3 = priceitermerge(alpha2,beta2,sigma2,x,mc,prices_curr,norm_rnd,tol,weig
 %%
 %Calc Producer Surplus
     %premerger
-    s_curr_num_sim = exp( (beta * x - alpha2 * pricesq2)' .* ones(1,rows(norm_rnd))...
+    s_curr_num_sim = exp( (beta2 * x - alpha2 * pricesq2)' .* ones(1,rows(norm_rnd))...
                     + random_coeffs );
     sum_s_curr_num_sim = sum(s_curr_num_sim);
     pre_s_curr_denom_sim = (1 + sum_s_curr_num_sim);
@@ -136,7 +136,7 @@ pricesq3 = priceitermerge(alpha2,beta2,sigma2,x,mc,prices_curr,norm_rnd,tol,weig
     producer_premerger = sum(pre_producer_premerger);
     
     %postmerger
-    s_curr_num_sim = exp( (beta * x - alpha2 * pricesq3)' .* ones(1,rows(norm_rnd))...
+    s_curr_num_sim = exp( (beta2 * x - alpha2 * pricesq3)' .* ones(1,rows(norm_rnd))...
                     + random_coeffs );
     sum_s_curr_num_sim = sum(s_curr_num_sim);
     pre_s_curr_denom_sim = (1 + sum_s_curr_num_sim);

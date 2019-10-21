@@ -107,23 +107,23 @@ pricesq3 = priceitermerge(alpha2,beta2,sigma2,x,mc,prices_curr,norm_rnd,tol,weig
     random_coeffs = sigma * x' .* ones(rows(x'),rows(norm_rnd)) .* norm_rnd';
    
    %premerger
-    pre_logit_incl_premerger_sim = exp( (beta * x - alpha * pricesq2)' .* ones(1,rows(norm_rnd))...
+    pre_logit_incl_premerger_sim = exp( (beta * x - alpha2 * pricesq2)' .* ones(1,rows(norm_rnd))...
                     + random_coeffs );
     mean_logit_incl_premerger_sim = mean(pre_logit_incl_premerger_sim,2);
-    logit_incl_premerger = log(sum(mean_logit_incl_premerger_sim));
+    logit_incl_premerger = log(1 + sum(mean_logit_incl_premerger_sim));
     
     %postmerger
-    pre_logit_incl_postmerger_sim = exp( (beta * x - alpha * pricesq3)' .* ones(1,rows(norm_rnd))...
+    pre_logit_incl_postmerger_sim = exp( (beta * x - alpha2 * pricesq3)' .* ones(1,rows(norm_rnd))...
                     + random_coeffs );
     mean_logit_incl_postmerger_sim = mean(pre_logit_incl_postmerger_sim,2);
-    logit_incl_postmerger = log(sum(mean_logit_incl_postmerger_sim));
+    logit_incl_postmerger = log(1 + sum(mean_logit_incl_postmerger_sim));
     
     cs_change = (1 / alpha2) * (logit_incl_postmerger - logit_incl_premerger);
     
 %%
 %Calc Producer Surplus
     %premerger
-    s_curr_num_sim = exp( (beta * x - alpha * pricesq2)' .* ones(1,rows(norm_rnd))...
+    s_curr_num_sim = exp( (beta * x - alpha2 * pricesq2)' .* ones(1,rows(norm_rnd))...
                     + random_coeffs );
     sum_s_curr_num_sim = sum(s_curr_num_sim);
     pre_s_curr_denom_sim = (1 + sum_s_curr_num_sim);
@@ -136,7 +136,7 @@ pricesq3 = priceitermerge(alpha2,beta2,sigma2,x,mc,prices_curr,norm_rnd,tol,weig
     producer_premerger = sum(pre_producer_premerger);
     
     %postmerger
-    s_curr_num_sim = exp( (beta * x - alpha * pricesq3)' .* ones(1,rows(norm_rnd))...
+    s_curr_num_sim = exp( (beta * x - alpha2 * pricesq3)' .* ones(1,rows(norm_rnd))...
                     + random_coeffs );
     sum_s_curr_num_sim = sum(s_curr_num_sim);
     pre_s_curr_denom_sim = (1 + sum_s_curr_num_sim);
@@ -148,6 +148,8 @@ pricesq3 = priceitermerge(alpha2,beta2,sigma2,x,mc,prices_curr,norm_rnd,tol,weig
     pre_producer_postmerger = share_postmerger .* (pricesq3' - mc');    
     producer_postmerger = sum(pre_producer_postmerger);
 
+    ps_change = producer_postmerger - producer_premerger;
+    
 %%
 %%%%%%%%%%%%%%%%%%%%%%%%
 %   Question 5: Merger Prices with Cost Reductions

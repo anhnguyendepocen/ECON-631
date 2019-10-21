@@ -116,9 +116,9 @@ pricesq3 = priceitermerge(alpha2,beta2,sigma2,x,mc,prices_curr,norm_rnd,tol,weig
     pre_logit_incl_postmerger_sim = exp( (beta * x - alpha * pricesq3)' .* ones(1,rows(norm_rnd))...
                     + random_coeffs );
     mean_logit_incl_postmerger_sim = mean(pre_logit_incl_postmerger_sim,2);
-    logit_incl_postmerger = log(sum(mean_logit_incl_postmerger_sim));
+    logit_incl_postmerger = log(1 + sum(mean_logit_incl_postmerger_sim));
     
-    cs_change = (1 / alpha) * (logit_incl_postmerger - logit_incl_premerger);
+    cs_change = (1 / alpha2) * (logit_incl_postmerger - logit_incl_premerger);
     
 %%
 %Calc Producer Surplus
@@ -132,7 +132,8 @@ pricesq3 = priceitermerge(alpha2,beta2,sigma2,x,mc,prices_curr,norm_rnd,tol,weig
     s_curr = mean(s_curr_sim,2);
     share_premerger = s_curr;
     
-    producer_premerger = sum(share_premerger .* (pricesq2' - mc'));
+    pre_producer_premerger = share_premerger .* (pricesq2' - mc');
+    producer_premerger = sum(pre_producer_premerger);
     
     %postmerger
     s_curr_num_sim = exp( (beta * x - alpha * pricesq3)' .* ones(1,rows(norm_rnd))...
@@ -144,8 +145,8 @@ pricesq3 = priceitermerge(alpha2,beta2,sigma2,x,mc,prices_curr,norm_rnd,tol,weig
     s_curr = mean(s_curr_sim,2);
     share_postmerger = s_curr;
     
-    producer_postmerger = sum(share_postmerger .* (pricesq3' - mc'));    
- 
+    pre_producer_postmerger = share_postmerger .* (pricesq3' - mc');    
+    producer_postmerger = sum(pre_producer_postmerger);
 
 %%
 %%%%%%%%%%%%%%%%%%%%%%%%

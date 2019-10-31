@@ -28,7 +28,7 @@ while distance > tol;
             else
                 num_delta_s_delta_p_mat_sim = s_curr_num_sim(i,:) .*  s_curr_num_sim(j,:);
                 denom_delta_s_delta_p_mat_sim = pre_s_curr_denom_sim .* pre_s_curr_denom_sim;
-                delta_s_delta_p_mat(i,j) = mean( num_delta_s_delta_p_mat_sim ./ denom_delta_s_delta_p_mat_sim, 2);
+                delta_s_delta_p_mat(i,j) = alpha * mean( num_delta_s_delta_p_mat_sim ./ denom_delta_s_delta_p_mat_sim, 2);
             end;
         end;
     end;    

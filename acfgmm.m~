@@ -1,0 +1,27 @@
+function [gmmobj] = acfgmm(x,subset_log_sales,subset_rhs,lag_vars,instruments,weights);
+
+%x = x0;
+prod_x = [x(1,2) x(1,3) x(1,4)];
+
+constant = zeros(rows(subset_log_sales),1) + 1;
+pseudo_resid_no_prod = subset_log_sales - x(1,1) * constant ...
+                        - subset_rhs * prod_x';
+pseudo_resid = pseudo_resid_no_prod - ...
+           x(1,5) * (lag_vars(:,4) - lag_vars(:,1:3) * prod_x');
+
+
+dim_instruments = columns(instruments);
+pseudo_resid_copy = repmat(pseudo_resid,1,dim_instruments);
+
+weights_use = zeros(dim_instruments);
+for i = 1:dim_instruments;
+      weights_use(i,i) = weights(i);
+end;
+
+ins_weighted = instruments * weights;
+
+pre_gmmobj = diag(pseudo_resid_copy * ins_weighted');
+
+gmmobj = pre_gmmobj' * pre_gmmobj;
+
+end

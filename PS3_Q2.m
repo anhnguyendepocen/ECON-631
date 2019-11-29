@@ -47,7 +47,8 @@ subset_rhs = pre_subset_rhs(subset_set,:);
 
 
 %initial guesses 
-x0 = [ 1 .5 .5 .5 .8];
+%beta_constant,beta_emp,beta_cap,beta_rdcap, rho 
+x0 = [ 1 .5 .5 .5 .2];
 
 %compute once with "bad" weights
 weights = eye(4);
@@ -65,7 +66,8 @@ constant = zeros(rows(subset_log_sales),1) + 1;
 pseudo_resid_no_prod_est = subset_log_sales - estacf(1,1) * constant ...
                         - subset_rhs * prod_acf';
 pseudo_resid_est = pseudo_resid_no_prod_est - ...
-           estacf(1,5) * (lag_vars(:,4) - lag_vars(:,1:3) * prod_acf');
+           estacf(1,5) * (lag_vars(:,4) - estacf(1,1) * constant - ...
+                         lag_vars(:,1:3) * prod_acf');
 dim_instruments = columns(instruments);
 
 pre_weight_matrix = zeros(dim_instruments);
@@ -127,7 +129,8 @@ for j = 2: bstrp_iters;
     bstrp_pseudo_resid_no_prod_est = bstrp_subset_log_sales - bstrp_estacf(1,1) * constant ...
                         - bstrp_subset_rhs * bstrp_prod_acf';
     bstrp_pseudo_resid_est = bstrp_pseudo_resid_no_prod_est - ...
-           bstrp_estacf(1,5) * (bstrp_lag_vars(:,4) - bstrp_lag_vars(:,1:3) * bstrp_prod_acf');
+           bstrp_estacf(1,5) * (bstrp_lag_vars(:,4) - bstrp_estacf(1,1) * constant ...
+                                            - bstrp_lag_vars(:,1:3) * bstrp_prod_acf');
 
     bstrp_pre_weight_matrix = zeros(dim_instruments);
     for i = 1: rows(pseudo_resid_est);

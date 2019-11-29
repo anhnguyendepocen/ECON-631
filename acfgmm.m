@@ -7,7 +7,8 @@ constant = zeros(rows(subset_log_sales),1) + 1;
 pseudo_resid_no_prod = subset_log_sales - x(1,1) * constant ...
                         - subset_rhs * prod_x';
 pseudo_resid = pseudo_resid_no_prod - ...
-           x(1,5) * (lag_vars(:,4) - lag_vars(:,1:3) * prod_x');
+           x(1,5) * (lag_vars(:,4) - x(1,1) * constant ... 
+                                   - lag_vars(:,1:3) * prod_x');
 
 
 dim_instruments = columns(instruments);

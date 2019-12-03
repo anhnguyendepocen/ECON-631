@@ -47,7 +47,8 @@ subset_rhs = pre_subset_rhs(subset_set,:);
 
 
 %initial guesses 
-x0 = [ 1 .5 .5 .5 .8];
+%beta_constant,beta_emp,beta_cap,beta_rdcap, rho 
+x0 = [ 1 .5 .5 .5 .2];
 
 %compute once with "bad" weights
 weights = eye(4);
@@ -55,7 +56,7 @@ instruments = horzcat(zeros(rows(subset_rhs),1) + 1, ...
                        log_emp(lag_picker), log_cap(subset_set), ...
                        log_rdcap(subset_set) );
 
-options  =  optimset('GradObj','off','LargeScale','off','Display','iter','TolFun',1e-14,'TolX',1e-14,'Diagnostics','on','MaxFunEvals',200000,'MaxIter',1000); 
+options  =  optimset('GradObj','off','LargeScale','off','Display','iter','TolFun',1e-20,'TolX',1e-20,'Diagnostics','on','MaxFunEvals',500000,'MaxIter',5000); 
 [estacf] = fminunc(@(x)acfgmm(x,subset_log_sales,subset_rhs,lag_vars,instruments,weights),x0,options);
 
 %%
@@ -65,7 +66,8 @@ constant = zeros(rows(subset_log_sales),1) + 1;
 pseudo_resid_no_prod_est = subset_log_sales - estacf(1,1) * constant ...
                         - subset_rhs * prod_acf';
 pseudo_resid_est = pseudo_resid_no_prod_est - ...
-           estacf(1,5) * (lag_vars(:,4) - lag_vars(:,1:3) * prod_acf');
+           estacf(1,5) * (lag_vars(:,4) - estacf(1,1) * constant - ...
+                         lag_vars(:,1:3) * prod_acf');
 dim_instruments = columns(instruments);
 
 pre_weight_matrix = zeros(dim_instruments);
@@ -79,7 +81,11 @@ weight_matrix = inv(pre_weight_matrix);
 
 %%
 %Estimate with optimal weights
+x1 = .5 * (x0 + estacf);
 [estacf_opt] = fminunc(@(x)acfgmm(x,subset_log_sales,subset_rhs,lag_vars,instruments,weight_matrix),x0,options);
+[estacf_opt2] = fminunc(@(x)acfgmm(x,subset_log_sales,subset_rhs,lag_vars,instruments,weight_matrix),x1,options);
+[estacf_opt3] = fminunc(@(x)acfgmm(x,subset_log_sales,subset_rhs,lag_vars,instruments,weight_matrix),estacf,options);
+[estacf_opt4] = fminsearch(@(x)acfgmm(x,subset_log_sales,subset_rhs,lag_vars,instruments,weight_matrix),x1);
 
 %%
 %%%%%
@@ -127,7 +133,8 @@ for j = 2: bstrp_iters;
     bstrp_pseudo_resid_no_prod_est = bstrp_subset_log_sales - bstrp_estacf(1,1) * constant ...
                         - bstrp_subset_rhs * bstrp_prod_acf';
     bstrp_pseudo_resid_est = bstrp_pseudo_resid_no_prod_est - ...
-           bstrp_estacf(1,5) * (bstrp_lag_vars(:,4) - bstrp_lag_vars(:,1:3) * bstrp_prod_acf');
+           bstrp_estacf(1,5) * (bstrp_lag_vars(:,4) - bstrp_estacf(1,1) * constant ...
+                                            - bstrp_lag_vars(:,1:3) * bstrp_prod_acf');
 
     bstrp_pre_weight_matrix = zeros(dim_instruments);
     for i = 1: rows(pseudo_resid_est);
@@ -162,5 +169,5 @@ acf_final = horzcat(estacf',bstrp_se');
 
 acf_opt_final = horzcat(estacf_opt',bstrp_opt_se');
 
-%writecell(acf_final,'/Users/russellmorton/Desktop/Coursework/Fall 2019/ECON 631/Problem Sets/PS3_Q2_output.xlsx','IdentityWeights')
-xlswrite('/Users/russellmorton/Desktop/Coursework/Fall 2019/ECON 631/Problem Sets/PS3_Q2_output_I_weights.xls',acf_final,'IdentityWeights')
+xlswrite('/Users/russellmorton/Desktop/Coursework/Fall 2019/ECON 631/Problem Sets/PS3_Q2_output_I_weights.xls',acf_final)
+xlswrite('/Users/russellmorton/Desktop/Coursework/Fall 2019/ECON 631/Problem Sets/PS3_Q2_output_opt_weights.xls',acf_opt_final)

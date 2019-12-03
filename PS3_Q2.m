@@ -48,7 +48,7 @@ subset_rhs = pre_subset_rhs(subset_set,:);
 
 %initial guesses 
 %beta_constant,beta_emp,beta_cap,beta_rdcap, rho 
-x0 = [ 1 .5 .5 .5 .2];
+x0 = [0 .8 .8 .8 .8];
 
 %compute once with "bad" weights
 weights = eye(4);
@@ -56,7 +56,7 @@ instruments = horzcat(zeros(rows(subset_rhs),1) + 1, ...
                        log_emp(lag_picker), log_cap(subset_set), ...
                        log_rdcap(subset_set) );
 
-options  =  optimset('GradObj','off','LargeScale','off','Display','iter','TolFun',1e-14,'TolX',1e-14,'Diagnostics','on','MaxFunEvals',200000,'MaxIter',1000); 
+options  =  optimset('GradObj','off','LargeScale','off','Display','iter','TolFun',1e-20,'TolX',1e-20,'Diagnostics','on','MaxFunEvals',500000,'MaxIter',5000); 
 [estacf] = fminunc(@(x)acfgmm(x,subset_log_sales,subset_rhs,lag_vars,instruments,weights),x0,options);
 
 %%
@@ -81,7 +81,8 @@ weight_matrix = inv(pre_weight_matrix);
 
 %%
 %Estimate with optimal weights
-[estacf_opt] = fminunc(@(x)acfgmm(x,subset_log_sales,subset_rhs,lag_vars,instruments,weight_matrix),x0,options);
+x1 = estacf / 2;
+[estacf_opt] = fminunc(@(x)acfgmm(x,subset_log_sales,subset_rhs,lag_vars,instruments,weight_matrix),x1,options);
 
 %%
 %%%%%
@@ -90,7 +91,7 @@ weight_matrix = inv(pre_weight_matrix);
 %Estimates
 %%%%%
 
-bstrp_iters = 5000;
+bstrp_iters = 2000;
 
 bstrp_matrix = zeros(bstrp_iters,length(estacf));
 bstrp_matrix_opt = zeros(bstrp_iters,length(estacf_opt));
@@ -142,7 +143,8 @@ for j = 2: bstrp_iters;
     bstrp_pre_weight_matrix = bstrp_pre_weight_matrix * (1 / rows(bstrp_pseudo_resid_est) );
     bstrp_weight_matrix = inv(bstrp_pre_weight_matrix);
     
-    [bstrp_estacf_opt] = fminunc(@(x)acfgmm(x,bstrp_subset_log_sales,bstrp_subset_rhs,bstrp_lag_vars,bstrp_instruments,bstrp_weight_matrix),x0,options);
+    x1 = bstrp_estacf / 2;
+    [bstrp_estacf_opt] = fminunc(@(x)acfgmm(x,bstrp_subset_log_sales,bstrp_subset_rhs,bstrp_lag_vars,bstrp_instruments,bstrp_weight_matrix),x1,options);
     bstrp_matrix_opt(j,:) = bstrp_estacf_opt;
 
 end;
